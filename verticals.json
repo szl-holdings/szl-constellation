@@ -1,0 +1,4 @@
+{
+  "note": "verticals.json is mirrored from the Space. The live wiring map binds 8 verticals (killinchu, puriq, terra, aegis, lyte, counsel, finance, david-leads) to their real repos, Spaces, kernels, models, datasets, and endpoints.",
+  "canonical": "https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/raw/main/verticals.json"
+}
