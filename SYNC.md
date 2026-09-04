@@ -1,16 +1,4 @@
-# Sync
+# Superseded
 
-Canonical split:
-
-- Runtime: https://a-11-oy.com/command
-- Constellation tab: https://a-11-oy.com/command/constellation
-- Proof: https://a11oy.net (no runtime)
-- Showcase Space: https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation
-
-This repo holds `holo/command.html` (Second Brain + 49 estates).
-
-Push to the Space (needs a Hub token on your machine; Grok has no Hugging Face connector):
-
-```
-huggingface-cli upload SZLHOLDINGS/szl-constellation holo/command.html holo/command.html --repo-type space
-```
+The bootstrap pointer file is superseded by `space/` — the full canonical source
+(app.py v4.5, holo/index.html v6.1) is mirrored in this repo as of 2026-09-04.
