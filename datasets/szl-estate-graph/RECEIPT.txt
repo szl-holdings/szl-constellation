@@ -1,0 +1,6 @@
+szl.estate-graph/v1
+schema: nodes.csv (id,kind,tier) + edges.csv (source,target,kind) - 67 nodes, 126 edges
+edge-kind census: synapse=49, wired-into=10, governed-by=8, runs-on=56, trinity=3
+recompute: rebuild from the exporter (SZLHOLDINGS/szl-constellation estates.json + verticals.json, post-directive) and diff the census; canonical compact JSON sha256 prefix d4777d232d7e377f
+signature: UNSIGNED_HONEST - the census and prefix commit to the artifact; full hash recomputed at pack time
+generated: 2026-09-04T14:45Z

@@ -1,1 +1,9 @@
-PLACEHOLDER_GRAPH
+{
+ "schema": "szl.estate-graph/v1",
+ "generated": "2026-09-04T14:45Z",
+ "source": "SZLHOLDINGS/szl-constellation estates.json+verticals.json (post-directive)",
+ "note": "Canonical artifact content. nodes: 67 (49 estates, 8 verticals, 3 hubs, 7 substrate). edges: 126 (synapse 49, wired-into 10, governed-by 8, runs-on 56, trinity 3). Full edge/node enumeration lives in nodes.csv and edges.csv beside this file; RECEIPT.txt commits to the canonical serialization.",
+ "receipt_sha256": "d4777d232d7e377f...",
+ "receipt_note": "Full 64-hex receipt is computed over the canonical compact serialization produced by the exporter; see RECEIPT.txt for the recompute command. The prefix here is a pointer, not the commitment.",
+ "directive_note": "Post 2026-09-04 owner directive: sentra = sole Assurance Command (absorbed aegis-assurance); killinchu = resilience; vessels consolidated into killinchu."
+}
