@@ -28,4 +28,13 @@ payload, verifiable by recomputing.
 Nothing glows that didn't earn it. REACHABLE is computed, DECLARED is receipted,
 UNMEASURED is reported — never fabricated. Λ = Conjecture 1 (advisory).
 
+## Release log
+
+- **v4.5 — 2026-09-04:** Restored the Hugging Face runtime at Space commit
+  [`5e4c2fc`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/commit/5e4c2fc59cee618de1e43b18e0c6b2ccd543b498).
+  The mounted Gradio consoles now disable SSR explicitly so their Node process
+  cannot take the Space's port from Uvicorn. The custom WebGL map, JSON APIs,
+  and `/panels` are live together. Static serving is restricted to the two
+  public manifests; application source and dependency files return 404.
+
 Apache-2.0 · SZL Holdings
