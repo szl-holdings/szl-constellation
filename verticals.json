@@ -1,4 +1,130 @@
 {
-  "note": "verticals.json is mirrored from the Space. The live wiring map binds 8 verticals (killinchu, puriq, terra, aegis, lyte, counsel, finance, david-leads) to their real repos, Spaces, kernels, models, datasets, and endpoints.",
-  "canonical": "https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/raw/main/verticals.json"
+  "generated": "2026-09-04T03:30:00Z",
+  "source": "audited from org:szl-holdings GitHub search (113 repos) + SZLHOLDINGS Hub inventory (44 models, 40 datasets, 17 spaces); amended by owner directive 2026-09-04",
+  "honesty": "every entry below was verified to exist in the audit; endpoints are probed at runtime and labeled MEASURED or UNAVAILABLE",
+  "consolidation_log": [
+    {"effective": "2026-09-04", "absorbed": "aegis-assurance", "into": "sentra", "directive": "owner - aegis fully consolidated into sentra; sentra is the sole assurance flagship", "note": "aegis-assurance Space decommissioned; assurance mission (GATE admission + YAWAR receipt chain) lives in the sentra flagship. Amends the killinchu#386 gated-deletion contract: sentra is flagship, not a deletion candidate."},
+    {"effective": "2026-09-04", "absorbed": "vessels", "into": "killinchu", "directive": "killinchu#386 - killinchu is the sole cyber-physical resilience command", "note": "vessels Space carries the consolidation pointer card"}
+  ],
+  "verticals": [
+    {
+      "id": "killinchu",
+      "name": "Killinchu",
+      "domain": "Defense / Maritime Resilience",
+      "tagline": "Sole cyber-physical resilience runtime - counter-UAS reference, maritime C2, governed OSINT",
+      "repos": ["szl-holdings/killinchu", "szl-holdings/khipu-sda-core", "szl-holdings/sda"],
+      "spaces": ["SZLHOLDINGS/killinchu"],
+      "kernels": ["szl-receipt-attn", "szl-block-kv", "szl-invariants"],
+      "models": ["KILLINCHU-EYE", "chaski"],
+      "datasets": ["killinchu-osint-corpus"],
+      "live": ["https://szlholdings-killinchu.hf.space"],
+      "widget": "osint",
+      "widget_endpoint": "https://szlholdings-killinchu.hf.space/api/killinchu/v1/public-intel/sources",
+      "widget_note": "Ten-source governed public-intelligence mesh (merged killinchu#387). Live digest when the runtime answers; UNAVAILABLE otherwise, never fabricated."
+    },
+    {
+      "id": "sentra",
+      "name": "Sentra",
+      "domain": "Assurance Command",
+      "tagline": "SOLE assurance flagship - GATE admission (deny-by-default, advisory only), YAWAR receipt-chain verification, evidence plane. Absorbed the aegis plane 2026-09-04.",
+      "repos": ["szl-holdings/szl-defensive-control-plane", "szl-holdings/immune"],
+      "spaces": ["SZLHOLDINGS/sentra"],
+      "kernels": ["szl-govsign", "szl-provctl", "szl-blocked"],
+      "models": ["szl-govsign", "szl-provctl"],
+      "datasets": ["uds-governance-receipts", "uds-spans-receipts"],
+      "live": ["https://szlholdings-sentra.hf.space"],
+      "widget": "receipts",
+      "widget_endpoint": "https://szlholdings-sentra.hf.space/api/sentra/planes",
+      "widget_note": "The YAWAR verifier - paste any SZL receipt chain, linkage is recomputed link by link. GATE is advisory; approval never lifts a hard deny."
+    },
+    {
+      "id": "puriq",
+      "name": "PURIQ",
+      "domain": "Markets / Formula Governance",
+      "tagline": "The formula corpus executed against live public signals - symmetric vs Egyptian Lambda, fail-closed Yuyay-13",
+      "repos": ["szl-holdings/puriq-live", "szl-holdings/szl-quant"],
+      "spaces": ["SZLHOLDINGS/puriq-markets"],
+      "kernels": ["szl-lambda-gate", "szl-formulas", "szl-invariants", "governed-inference-meter"],
+      "models": ["khipu-r3", "szl-governed-norm"],
+      "datasets": ["szl-quant-sft-v1", "canonical-formulas-v1"],
+      "live": [],
+      "widget": "lambda",
+      "widget_note": "The Lambda gate itself - geometric aggregation over axis scores with the 0.97 advisory threshold. Computes here, now, on your inputs."
+    },
+    {
+      "id": "terra",
+      "name": "Terra",
+      "domain": "Real Estate / Public Records",
+      "tagline": "Public-records underwriting - PLUTO measured on Kings/Queens; absence reported, never interpolated",
+      "repos": ["szl-holdings/szl-real-estate", "szl-holdings/vertical-services"],
+      "spaces": ["SZLHOLDINGS/terra", "SZLHOLDINGS/terra-assurance"],
+      "kernels": ["szl-maskmod", "szl-energy-attest"],
+      "models": ["ReceiptAgent-Nano"],
+      "datasets": [],
+      "live": ["https://szlholdings-terra.hf.space"],
+      "widget": "probe",
+      "widget_note": "Live reachability + the honest underwriting contract: measured boroughs declared, uncovered boroughs UNAVAILABLE."
+    },
+    {
+      "id": "lyte",
+      "name": "Lyte",
+      "domain": "Vertical Factory / Observability",
+      "tagline": "The design-partner cell - same factory compiler, Lyte window; BIND hologram for named frontiers N1-N25",
+      "repos": ["szl-holdings/lyte-services", "szl-holdings/lyte-lattice", "szl-holdings/a11oy-factory"],
+      "spaces": ["SZLHOLDINGS/lyte"],
+      "kernels": ["szl-ouroboros", "szl-kernels"],
+      "models": ["TinyKhipu-Nano", "A11OY-MINI"],
+      "datasets": ["test-results"],
+      "live": ["https://szlholdings-lyte.hf.space"],
+      "widget": "ouroboros",
+      "widget_note": "The bounded loop-tax ledger - the recursion discipline every Lyte cell inherits."
+    },
+    {
+      "id": "counsel",
+      "name": "Counsel / Ayllu",
+      "domain": "Legal / Governed Advisory",
+      "tagline": "Evidence-bound holographic agent council - 11 Quechua seats, debate-then-converge, fail-closed Lambda gate",
+      "repos": ["szl-holdings/ayllu"],
+      "spaces": ["SZLHOLDINGS/counsel", "SZLHOLDINGS/counsel-assurance"],
+      "kernels": ["szl-lambda-gate", "szl-formulas"],
+      "models": ["WILLAY", "chaski-r2"],
+      "datasets": ["doctrine-v10-v11", "szl-1-doctrine-sft"],
+      "live": ["https://szlholdings-counsel.hf.space"],
+      "widget": "bm25",
+      "widget_note": "Retrieval over the doctrine corpus - the same BM25 plane that backs governed-agent-bench."
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "domain": "Portfolio Analytics",
+      "tagline": "Doctrine-governed quant research - every advisory signal ships a DSSE-signed receipt; paper-only, never advice",
+      "repos": ["szl-holdings/vertical-services", "szl-holdings/szl-quant"],
+      "spaces": ["SZLHOLDINGS/finance"],
+      "kernels": ["szl-energy-attest", "governed-inference-meter"],
+      "models": ["szl-receiptagent-qwen35-0.8b-v3"],
+      "datasets": ["szl-quant-sft-v1"],
+      "live": ["https://szlholdings-finance.hf.space"],
+      "widget": "quant",
+      "widget_note": "Quantization Pareto curve - the quality-vs-memory frontier every deployment decision pays."
+    },
+    {
+      "id": "david-leads",
+      "name": "David Leads",
+      "domain": "Revenue / Lead Intelligence",
+      "tagline": "Evidence-backed broker research - governed lead intelligence on auditable public data",
+      "repos": ["szl-holdings/david-leads"],
+      "spaces": ["SZLHOLDINGS/david-leads"],
+      "kernels": ["szl-invariants"],
+      "models": ["brain-navigator-r2"],
+      "datasets": ["why-we-lead"],
+      "live": ["https://szlholdings-david-leads.hf.space"],
+      "widget": "probe",
+      "widget_note": "Live reachability plus the pipeline's public evidence trail."
+    }
+  ],
+  "shared_substrate": {
+    "repos": ["szl-holdings/platform", "szl-holdings/szl-substrate", "szl-holdings/szl-receipt", "szl-holdings/khipu-consensus", "szl-holdings/hatun-mcp", "szl-holdings/szl-frontier", "szl-holdings/szl-sovereign-os"],
+    "governance": ["szl-holdings/szl-doctrine", "szl-holdings/governance-as-code", "szl-holdings/governed-receipt-spec", "szl-holdings/lutar-lean", "szl-holdings/szl-trust", "szl-holdings/evidence-doctrine"],
+    "bench_fleet": ["szl-holdings/retrieval-bench", "szl-holdings/frontier-bench", "szl-holdings/quant-curve", "szl-holdings/szl-retrieval-bench", "szl-holdings/szl-engine-bench", "szl-holdings/szl-quant-bench", "szl-holdings/szl-calibration", "szl-holdings/szl-wave1-report", "szl-holdings/szl-runbook-catalog"]
+  }
 }

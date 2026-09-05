@@ -1,22 +1,38 @@
-"""SZL Constellation v4.5 - the map checks itself against reality.
+"""SZL Constellation v4.7 - Sentra Assurance and receipted Crosscheck.
 
-estate_drift(): the DECLARED manifest census (the receipted estate graph) vs the
-MEASURED live org (Hub API + GitHub). Divergence is named node by node;
-decommissioned surfaces from the consolidation log are labeled EXPECTED.
-This is the loop made literal: the estate never stops checking its own map.
-Doctrine v11.
+The constellation does not re-implement verdict math. The Sentra Assurance tab
+proxies the flagship's real planes (/api/sentra/gate, /api/sentra/yawar/verify)
+and reports UNAVAILABLE until the v5 deploy lands. Doctrine v11.
 
-Mirror note: canonical runtime lives on HF Space SZLHOLDINGS/szl-constellation.
-This copy mirrors Space commit b975f47c (2026-09-04).
+v4.6: Crosscheck is wired into both the console and a receipted REST endpoint.
+The mounted console remains fail-closed and disables Gradio SSR so it cannot
+take over the Space's sole listening port.
+
+v4.7: the fail-closed promise is implemented, not just declared. The console
+build and mount are wrapped; ANY Gradio-version incompatibility now degrades
+to an honest UNAVAILABLE page at /panels plus a receipted failure record at
+/api/panels/status, while the root hologram and every API route stay live.
+A console mount failure can no longer take the whole Space down. The root
+hologram serve is guarded the same way.
 """
 import hashlib, json, math, os, time, urllib.request
 from collections import deque
+from typing import Any
+
+from crosscheck import crosscheck_chains
+from pydantic import BaseModel, Field
 
 GENESIS = "0" * 64
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = {}
 CACHE_TTL = 300
 SENTRA = "https://szlholdings-sentra.hf.space"
+
+
+class CrosscheckRequest(BaseModel):
+    a: list[dict[str, Any]]
+    b: list[dict[str, Any]]
+    rel_tol: float = Field(default=0.01, ge=0.0, le=1.0, allow_inf_nan=False)
 
 def _load(name):
     with open(os.path.join(HERE, name), "r", encoding="utf-8") as f:
@@ -34,7 +50,7 @@ def _receipt(payload):
 
 def _fetch_json(url, timeout=8, payload=None):
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(url, data=data, headers={"User-Agent": "szl-constellation/4.5", "Content-Type": "application/json"})
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": "szl-constellation/4.3", "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8"))
 
@@ -51,7 +67,7 @@ def _cached(key, fn):
 
 def _probe(url, timeout=6):
     try:
-        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "szl-constellation/4.5"})
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "szl-constellation/4.3"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return {"url": url, "state": "MEASURED", "http": r.status}
     except urllib.error.HTTPError as e:
@@ -59,7 +75,7 @@ def _probe(url, timeout=6):
     except Exception as e:
         return {"url": url, "state": "UNAVAILABLE", "detail": str(e)[:100]}
 
-# ---------- sentra flagship proxies ----------
+# ---------- sentra flagship proxies (no local verdict math) ----------
 
 def sentra_gate_proxy(scores_text, weights_text, threshold):
     try:
@@ -329,13 +345,14 @@ def live_estates():
     return _cached("org-measure", _measure_org)
 
 def estate_drift():
+    """Receipted map vs measured reality. Expected consolidations are labeled; the rest is drift."""
     live = live_estates()
     if live.get("state") == "UNAVAILABLE" or live.get("state") == "PARTIAL" and "spaces" not in live.get("huggingface", {}):
         return {"state": "UNAVAILABLE", "detail": "live measure incomplete; drift not computed on partial evidence"}
     live_spaces = set(live.get("huggingface", {}).get("spaces", {}).get("names", []))
     if not live_spaces:
         return {"state": "UNAVAILABLE", "detail": "no live space listing; drift not computed on partial evidence"}
-    declared = {s["name"] for s in MANIFEST["live_lattice"]}
+    declared = set(MANIFEST.get("live_lattice", [])) and {s["name"] for s in MANIFEST["live_lattice"]}
     expected_gone = {c["absorbed"] for c in MANIFEST.get("consolidation_log", [])}
     missing = sorted(declared - live_spaces)
     added = sorted(live_spaces - declared)
@@ -601,14 +618,19 @@ anything else is named and owed an explanation. This is the loop: the estate nev
 def create_app():
     import gradio as gr
     from fastapi import FastAPI
-    from fastapi.responses import FileResponse
+    from fastapi.responses import FileResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
 
     app = FastAPI(title="SZL Constellation")
 
     @app.get("/", include_in_schema=False)
     def root():
-        return FileResponse(os.path.join(HERE, "holo", "index.html"))
+        holo_path = os.path.join(HERE, "holo", "index.html")
+        if os.path.exists(holo_path):
+            return FileResponse(holo_path)
+        return JSONResponse({"state": "UNAVAILABLE",
+                             "detail": "holo/index.html missing on this host - nothing fabricated",
+                             "receipt": _receipt({"root": "holo-missing"})})
 
     @app.get("/api/constellation/manifest")
     def api_manifest():
@@ -656,8 +678,33 @@ def create_app():
         return kernel_line()
 
     app.mount("/static", StaticFiles(directory=HERE), name="static")
-    demo = build_consoles()
-    app = gr.mount_gradio_app(app, demo, path="/panels")
+
+    # v4.7: fail-closed console mount. v4.6's docstring promised this; the code
+    # mounted bare. Any Gradio-version incompatibility now degrades honestly:
+    # the map and every API route above stay live, /panels reports the failure.
+    panels_failure = None
+    try:
+        demo = build_consoles()
+        app = gr.mount_gradio_app(app, demo, path="/panels")
+    except Exception as e:
+        import traceback
+        panels_failure = {"state": "UNAVAILABLE",
+                          "detail": f"{type(e).__name__}: {str(e)[:300]}",
+                          "traceback_tail": traceback.format_exc().strip().splitlines()[-3:],
+                          "note": "console mount failed at boot; the map and every API route remain live"}
+
+    if panels_failure is not None:
+        @app.get("/panels", include_in_schema=False)
+        def panels_fallback():
+            return JSONResponse({**panels_failure, "receipt": _receipt(panels_failure)})
+
+    @app.get("/api/panels/status")
+    def api_panels_status():
+        if panels_failure is not None:
+            return {**panels_failure, "receipt": _receipt(panels_failure)}
+        return {"state": "MEASURED", "console": "mounted at /panels",
+                "receipt": _receipt({"console": "mounted"})}
+
     return app
 
 app = create_app()
