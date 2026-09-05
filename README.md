@@ -30,6 +30,16 @@ UNMEASURED is reported — never fabricated. Λ = Conjecture 1 (advisory).
 
 ## Release log
 
+- **Runtime restoration — 2026-09-05:** Space commit
+  [`f02ba6d`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/commit/f02ba6d250e5efe89b3401bc0593de3aed3a9e08)
+  restores mounted-console SSR isolation, bounded manifest loading, explicit
+  public-asset routes, and honest mount-failure status removed by a later update.
+  Newer dashboards and routes are preserved. Four offline regression tests pass.
+  Provider readback reports RUNNING at this exact commit; `/api/panels/status`
+  reports MOUNTED, the root WebGL map renders, and `/static/app.py` returns 404.
+  Reachability and unsigned hash receipts do not establish execution authority,
+  cryptographic signing, or the readiness of every linked service.
+
 - **v4.5 — 2026-09-04:** Restored the Hugging Face runtime at Space commit
   [`5e4c2fc`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/commit/5e4c2fc59cee618de1e43b18e0c6b2ccd543b498).
   The mounted Gradio consoles now disable SSR explicitly so their Node process
