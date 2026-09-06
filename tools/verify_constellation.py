@@ -146,9 +146,9 @@ def publisher_credential_contract(path: Path) -> dict[str, object]:
         raise AssertionError(f"publisher credential contract contains forbidden markers: {present}")
     if text.count("acquire_hf_publisher_token.py") != 1:
         raise AssertionError("publisher must use exactly one credential selector invocation")
-    if text.count("run_publish_constellation.py") != 2:
+    if text.count("run_publish_constellation.py") != 3:
         raise AssertionError(
-            "publisher entrypoint must appear once in compilation and once in the scoped publish step"
+            "publisher entrypoint must appear once in paths, once in compilation, and once in the scoped publish step"
         )
     return {
         "valid": True,
