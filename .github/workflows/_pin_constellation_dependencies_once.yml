@@ -1,0 +1,177 @@
+# SPDX-License-Identifier: Apache-2.0
+name: Resolve and verify Constellation dependency pins once
+
+on:
+  push:
+    branches:
+      - fix/constellation-source-reconcile-20260906
+    paths:
+      - .github/workflows/_pin_constellation_dependencies_once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: constellation-dependency-pins-20260906
+  cancel-in-progress: false
+
+jobs:
+  pin-and-test:
+    if: github.repository == 'szl-holdings/szl-constellation' && github.ref == 'refs/heads/fix/constellation-source-reconcile-20260906'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Check out exact repair branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: fix/constellation-source-reconcile-20260906
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+
+      - name: Resolve exact top-level pins and prove them in a clean environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=fix/constellation-source-reconcile-20260906
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/$branch | cut -f1)" = "$GITHUB_SHA"
+
+          python -m pip install --disable-pip-version-check \
+            'gradio==6.26.0' \
+            'fastapi>=0.110' \
+            'uvicorn>=0.29' \
+            'pydantic>=2' \
+            'pytest>=8' \
+            'httpx>=0.27' \
+            'huggingface_hub>=0.36'
+
+          python - <<'PY'
+          from __future__ import annotations
+
+          import datetime as dt
+          import importlib.metadata as md
+          import json
+          from pathlib import Path
+
+          names = (
+              'gradio',
+              'fastapi',
+              'uvicorn',
+              'pydantic',
+              'pytest',
+              'httpx',
+              'huggingface_hub',
+          )
+          versions = {name: md.version(name) for name in names}
+          if versions['gradio'] != '6.26.0':
+              raise SystemExit(f"unexpected Gradio resolution: {versions['gradio']}")
+
+          Path('space/requirements.txt').write_text(
+              '\n'.join(
+                  f"{name}=={versions[name]}"
+                  for name in ('gradio', 'fastapi', 'uvicorn', 'pydantic')
+              ) + '\n',
+              encoding='utf-8',
+          )
+          Path('space/requirements-test.txt').write_text(
+              '\n'.join(
+                  f"{name}=={versions[name]}"
+                  for name in ('pytest', 'httpx')
+              ) + '\n',
+              encoding='utf-8',
+          )
+          Path('tools').mkdir(exist_ok=True)
+          Path('tools/requirements-publish.txt').write_text(
+              f"huggingface_hub=={versions['huggingface_hub']}\n",
+              encoding='utf-8',
+          )
+          receipt = {
+              'schema': 'szl.constellation-dependency-lock/v1',
+              'sourceCommit': __import__('os').environ['GITHUB_SHA'],
+              'resolvedAt': dt.datetime.now(dt.timezone.utc)
+                  .isoformat(timespec='seconds')
+                  .replace('+00:00', 'Z'),
+              'python': __import__('platform').python_version(),
+              'packages': versions,
+              'verification': {
+                  'freshVirtualEnvironment': True,
+                  'applicationTestsRequired': True,
+                  'listenerContractRequired': True,
+              },
+          }
+          path = Path('docs/receipts/constellation-dependency-lock.json')
+          path.parent.mkdir(parents=True, exist_ok=True)
+          path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(receipt, sort_keys=True))
+          PY
+
+          python -m venv /tmp/constellation-verify
+          /tmp/constellation-verify/bin/python -m pip install --disable-pip-version-check \
+            -r space/requirements.txt \
+            -r space/requirements-test.txt
+          (
+            cd space
+            GRADIO_ANALYTICS_ENABLED=False \
+              /tmp/constellation-verify/bin/python -m pytest -q
+          )
+          /tmp/constellation-verify/bin/python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          path = Path('space/app.py')
+          tree = ast.parse(path.read_text(encoding='utf-8'), filename=str(path))
+          uvicorn_calls = 0
+          launch_calls = 0
+          disabled_mounts = 0
+          for node in ast.walk(tree):
+              if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                  continue
+              owner = node.func.value.id if isinstance(node.func.value, ast.Name) else None
+              if owner == 'uvicorn' and node.func.attr == 'run':
+                  uvicorn_calls += 1
+              if node.func.attr == 'launch':
+                  launch_calls += 1
+              if owner == 'gr' and node.func.attr == 'mount_gradio_app':
+                  for keyword in node.keywords:
+                      if (
+                          keyword.arg == 'ssr_mode'
+                          and isinstance(keyword.value, ast.Constant)
+                          and keyword.value.value is False
+                      ):
+                          disabled_mounts += 1
+          observed = (uvicorn_calls, launch_calls, disabled_mounts)
+          if observed != (1, 0, 1):
+              raise SystemExit(f'listener contract failed: {observed!r}')
+          print('ONE_LISTENER_CONTRACT_VERIFIED')
+          PY
+          git diff --check
+
+      - name: Commit verified pins and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=fix/constellation-source-reconcile-20260906
+          test "$(git ls-remote origin refs/heads/$branch | cut -f1)" = "$GITHUB_SHA"
+          git rm -- .github/workflows/_pin_constellation_dependencies_once.yml
+          git add -- \
+            space/requirements.txt \
+            space/requirements-test.txt \
+            tools/requirements-publish.txt \
+            docs/receipts/constellation-dependency-lock.json
+          git diff --cached --check
+          expected=$'.github/workflows/_pin_constellation_dependencies_once.yml\ndocs/receipts/constellation-dependency-lock.json\nspace/requirements-test.txt\nspace/requirements.txt\ntools/requirements-publish.txt'
+          test "$(git diff --cached --name-only | sort)" = "$expected"
+          git config user.name 'Lutar, Stephen P.'
+          git config user.email 'stephenlutar2@gmail.com'
+          git commit -s -m 'build(deps): pin Constellation runtime and test tools'
+          git push origin "HEAD:refs/heads/$branch"
