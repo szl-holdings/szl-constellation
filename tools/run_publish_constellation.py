@@ -35,9 +35,13 @@ def main() -> int:
                 "detail": str(error)[:2000],
             },
             "authority": {
-                "hubMutationClaimed": False,
+                "hubMutationState": "UNKNOWN_AFTER_FAILURE",
                 "liveVerificationClaimed": False,
             },
+            "operatorAction": (
+                "Inspect provider revision and the preceding workflow log before retry; "
+                "do not infer rollback or successful mutation from this receipt."
+            ),
         }
         RECEIPT.write_text(
             json.dumps(failure, indent=2, sort_keys=True) + "\n",
