@@ -6,6 +6,9 @@ events (deterministic by seed; generator proven 24/24 against the estate
 verifier convention). /api/c2/verify recomputes posted chains server-side.
 Public synthetic - no public effector. Lambda advisory. Doctrine v11.
 """
+
+# SZL Holographic Space Fabric v2
+from szl_hologram_assets import A11OY_HOLO_CSS, A11OY_HOLO_HEAD, merge_hologram_css, merge_hologram_head
 import ast, hashlib, json, math, os, random, time, urllib.request
 from collections import deque
 from typing import Any
@@ -758,7 +761,7 @@ def family_html(f):
 
 def build_consoles():
     import gradio as gr
-    with gr.Blocks(title="SZL Constellation - Consoles") as demo:
+    with gr.Blocks(title="SZL Constellation - Consoles", css=A11OY_HOLO_CSS, head=A11OY_HOLO_HEAD) as demo:
         gr.HTML("""<div class="backbar"><a href="/">&larr; back to the constellation</a> &middot;
         <a href="/c2" target="_blank">C2 operating picture</a> &middot;
         <a href="/api/constellation/manifest" target="_blank">api</a></div>
