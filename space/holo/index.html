@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SZL Constellation</title>
+<style>
+  html,body{margin:0;height:100%;background:#020409;overflow:hidden;font-family:ui-sans-serif,system-ui,'Segoe UI',sans-serif;color:#e6edfb}
+  #scene{position:fixed;inset:0}
+  .vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 42%,transparent 50%,rgba(1,2,6,.9) 100%)}
+  #boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#020409;z-index:40;transition:opacity 1.1s ease}
+  #boot .sig{font:700 12px ui-monospace,monospace;letter-spacing:.55em;color:#3af4c8;text-transform:uppercase;animation:pulse 1.6s ease-in-out infinite}
+  #boot .big{font-size:clamp(30px,6vw,58px);font-weight:850;margin-top:16px;letter-spacing:-1px;background:linear-gradient(100deg,#3af4c8,#5b8dee 45%,#8a6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #boot .sub{color:#6b7a99;font-size:13px;margin-top:12px;font-family:ui-monospace,monospace}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+  #hud-top{position:fixed;top:18px;left:20px;z-index:20;pointer-events:none}
+  #hud-top .k{font:700 11px ui-monospace,monospace;letter-spacing:.4em;color:#6b7a99;text-transform:uppercase}
+  #hud-top .t{font-size:clamp(20px,3vw,28px);font-weight:800;margin-top:5px;letter-spacing:-.4px}
+  #hud-top .t span{background:linear-gradient(100deg,#3af4c8,#8a6bff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #nav{position:fixed;top:18px;right:20px;z-index:26;display:flex;gap:10px}
+  #nav a{font:700 11px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#9fb0cf;text-decoration:none;border:1px solid rgba(140,170,220,.3);border-radius:10px;padding:9px 14px;background:rgba(255,255,255,.03);transition:all .2s}
+  #nav a:hover{color:#3af4c8;border-color:rgba(58,244,200,.5);box-shadow:0 0 22px rgba(58,244,200,.18)}
+  #stats{position:fixed;top:64px;right:20px;z-index:20;text-align:right;font:600 11.5px ui-monospace,monospace;color:#9fb0cf;line-height:1.9;pointer-events:none}
+  #stats b{color:#e6edfb}
+  #legend{position:fixed;bottom:16px;left:20px;z-index:20;font:600 11.5px ui-monospace,monospace;color:#9fb0cf;pointer-events:none;line-height:2}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:0}
+  #controls{position:fixed;bottom:16px;right:20px;z-index:25;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:50vw}
+  #controls button{background:rgba(58,244,200,.08);border:1px solid rgba(58,244,200,.4);color:#3af4c8;font:700 11px ui-monospace,monospace;letter-spacing:.12em;padding:10px 14px;border-radius:10px;cursor:pointer;text-transform:uppercase;transition:all .2s;backdrop-filter:blur(6px)}
+  #controls button:hover{background:rgba(58,244,200,.18);box-shadow:0 0 24px rgba(58,244,200,.25)}
+  #controls button.dim{border-color:rgba(140,170,220,.3);color:#9fb0cf;background:rgba(255,255,255,.03)}
+  #controls button.active{background:rgba(212,164,68,.16);border-color:#d4a444;color:#d4a444}
+  #pathbar{position:fixed;top:110px;left:20px;z-index:24;font:600 11.5px ui-monospace,monospace;color:#d4a444;display:none;max-width:44vw;line-height:1.8;text-shadow:0 0 12px rgba(212,164,68,.4)}
+  #tip{position:fixed;z-index:30;pointer-events:none;background:rgba(7,11,18,.94);border:1px solid rgba(140,170,220,.3);border-radius:9px;padding:7px 11px;font:600 12px ui-monospace,monospace;color:#e6edfb;display:none;transform:translate(14px,-26px)}
+  #panel{position:fixed;top:0;right:-400px;width:360px;height:100%;z-index:35;background:rgba(4,7,13,.96);border-left:1px solid rgba(140,170,220,.2);padding:28px 26px;transition:right .35s cubic-bezier(.2,.8,.2,1);overflow-y:auto;box-sizing:border-box;backdrop-filter:blur(12px)}
+  #panel.open{right:0}
+  #panel .close{position:absolute;top:16px;right:18px;color:#6b7a99;cursor:pointer;font:700 15px ui-monospace,monospace;background:none;border:none}
+  #panel .close:hover{color:#e6edfb}
+  #panel .tier{display:inline-block;font:700 10px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;border-radius:6px;padding:4px 9px;margin-bottom:14px}
+  #panel h2{margin:0 0 8px;font-size:24px;font-weight:800;letter-spacing:-.4px}
+  #panel .files{font:650 12px ui-monospace,monospace;color:#6b7a99;margin-bottom:16px}
+  #panel .desc{color:#9fb0cf;font-size:14px;line-height:1.7;margin-bottom:20px}
+  #panel .state{font:700 11px ui-monospace,monospace;letter-spacing:.12em;padding:9px 13px;border-radius:9px;margin-bottom:20px;text-transform:uppercase}
+  #panel .links a{display:block;color:#5b8dee;text-decoration:none;font:600 13px ui-monospace,monospace;padding:10px 13px;border:1px solid rgba(91,141,238,.25);border-radius:9px;margin-bottom:9px;transition:all .15s}
+  #panel .links a:hover{background:rgba(91,141,238,.12);border-color:rgba(91,141,238,.5)}
+  #panel .hubline{color:#6b7a99;font-size:12.5px;margin-bottom:20px;line-height:1.7}
+  #panel .hubline b{color:#d4a444}
+  #fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;z-index:50;background:#020409}
+  #fallback .box{max-width:540px;border:1px solid rgba(212,164,68,.4);border-radius:14px;padding:28px;color:#d4a444;font-size:14px;line-height:1.75;background:rgba(212,164,68,.06)}
+  @media (max-width:720px){ #legend{display:none} #controls{max-width:88vw} #stats{display:none} #pathbar{max-width:80vw} }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div class="vignette"></div>
+<div id="boot"><div class="sig">Synapse Ignition</div><div class="big">SZL CONSTELLATION</div><div class="sub" id="bootmsg">waking the estates…</div></div>
+<div id="hud-top"><div class="k">SZL Holdings · Living Archive</div><div class="t">The <span>Constellation</span></div></div>
+<div id="nav"><a href="/panels">Consoles</a><a href="/api/constellation/manifest" target="_blank" rel="noopener">API</a></div>
+<div id="stats"></div>
+<div id="pathbar"></div>
+<div id="legend">
+  <div><span class="dot" style="background:#3af4c8;box-shadow:0 0 8px #3af4c8"></span>REACHABLE — pinged live from your browser</div>
+  <div><span class="dot" style="background:#5b8dee"></span>DECLARED — manifest fact from the consolidation receipt</div>
+  <div><span class="dot" style="background:#d4a444"></span>TRUST PATH — computed by BFS over the wiring graph, receipted</div>
+</div>
+<div id="controls"></div>
+<div id="tip"></div>
+<div id="panel"><button class="close">✕</button><div id="panel-body"></div></div>
+<div id="fallback"><div class="box"><b>HOLOGRAM UNAVAILABLE.</b><br>The WebGL renderer or the three.js CDN could not be reached from this browser. The constellation is not faked — when it cannot render, it says so. The consoles at <a href="/panels" style="color:#d4a444">/panels</a> and the API at <a href="/api/constellation/manifest" style="color:#d4a444">/api</a> still compute.</div></div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+function showFallback(title, detail){
+  const box = document.querySelector('#fallback .box');
+  box.replaceChildren();
+  const heading = document.createElement('b');
+  heading.textContent = title;
+  const message = document.createElement('p');
+  message.textContent = detail;
+  const link = document.createElement('a');
+  link.href = '/api/constellation/manifest';
+  link.textContent = 'Check the manifest API';
+  box.append(heading, message, link);
+  const bootScreen = document.getElementById('boot');
+  if (bootScreen) bootScreen.style.display = 'none';
+  document.getElementById('fallback').style.display = 'flex';
+}
+async function boot(){
+  let THREE, OrbitControls, EffectComposer, RenderPass, UnrealBloomPass;
+  try {
+    THREE = await import('three');
+    ({OrbitControls} = await import('three/addons/controls/OrbitControls.js'));
+    ({EffectComposer} = await import('three/addons/postprocessing/EffectComposer.js'));
+    ({RenderPass} = await import('three/addons/postprocessing/RenderPass.js'));
+    ({UnrealBloomPass} = await import('three/addons/postprocessing/UnrealBloomPass.js'));
+  } catch(e) {
+    document.getElementById('boot').style.display='none';
+    document.getElementById('fallback').style.display='flex';
+    return;
+  }
+  let manifest, verticalsDoc;
+  try {
+    [manifest, verticalsDoc] = await Promise.all([
+      fetch('/static/estates.json', {signal:AbortSignal.timeout(15000)}).then(r=>{if(!r.ok) throw new Error('estates.json HTTP '+r.status); return r.json();}),
+      fetch('/static/verticals.json', {signal:AbortSignal.timeout(15000)}).then(r=>{if(!r.ok) throw new Error('verticals.json HTTP '+r.status); return r.json();})
+    ]);
+    if (!Array.isArray(manifest.estates) || !Array.isArray(manifest.live_lattice) || !Array.isArray(verticalsDoc.verticals)) throw new Error('Invalid manifest shape');
+  } catch(e) {
+    showFallback('MANIFEST UNAVAILABLE.', 'The estate manifests could not be loaded. No live map is claimed.');
+    return;
+  }
+  const ESTATES = manifest.estates, LATTICE = manifest.live_lattice, HUBS = manifest.hubs;
+  const VERTICALS = verticalsDoc.verticals;
+
+  const TIER_COLORS = {Core:0x5b8dee, Factory:0x3af4c8, Frontier:0x8a6bff, Creative:0xff6ad5, Vertical:0x64d97a, Bench:0x6fa8ff, Lab:0x8a6bff, LiveOps:0xd4a444, Receipts:0xd4a444};
+  const HUB_COLORS = {anatomy:0xff6ad5, second_brain:0x3af4c8, ouroboros:0xd4a444};
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x020409, 0.0085);
+  const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .1, 600);
+  camera.position.set(0, 15, 56);
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:'high-performance'});
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  document.getElementById('scene').appendChild(renderer.domElement);
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.05, 0.55, 0.12));
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true; controls.dampingFactor = .06;
+  controls.autoRotate = true; controls.autoRotateSpeed = .45;
+  controls.minDistance = 10; controls.maxDistance = 170;
+
+  function glowTexture(color, hard){
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(64,64,0,64,64,64);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(hard ? .18 : .1, color);
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0,0,128,128);
+    return new THREE.CanvasTexture(c);
+  }
+  function textSprite(text, color, px=44){
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 128;
+    const g = c.getContext('2d');
+    g.font = `700 ${px}px ui-monospace, monospace`;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = color; g.shadowBlur = 30;
+    g.fillStyle = color; g.fillText(text, 512, 64);
+    const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthWrite:false}));
+    s.scale.set(26, 3.25, 1);
+    return s;
+  }
+  const starTex = glowTexture('rgba(160,190,255,1)', false);
+  const goldTex = glowTexture('#ffd97a', true);
+  {
+    const n = 1800, pos = new Float32Array(n*3);
+    for(let i=0;i<n;i++){
+      const r = 170 + Math.random()*230, th = Math.random()*Math.PI*2, ph = Math.acos(2*Math.random()-1);
+      pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.cos(ph)*.6; pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({size:1.2, map:starTex, transparent:true, opacity:.7, depthWrite:false, color:0x8fa8d8})));
+  }
+
+  const hex = c => '#'+c.toString(16).padStart(6,'0');
+  const orbs = [], threads = [], pulses = [], pickables = [];
+  const nodePos = {};
+
+  const core = new THREE.Group(); scene.add(core);
+  function hubOrb(color, r){
+    const grp = new THREE.Group();
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 2),
+      new THREE.MeshBasicMaterial({color, transparent:true, opacity:.92}));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(hex(color), true), color, transparent:true, opacity:.55, depthWrite:false, blending:THREE.AdditiveBlending}));
+    halo.scale.setScalar(r*6.6);
+    grp.add(m, halo); core.add(grp);
+    return {grp, mesh:m};
+  }
+  const brain = hubOrb(HUB_COLORS.second_brain, 3.6); brain.grp.position.set(0,0,0);
+  const anat  = hubOrb(HUB_COLORS.anatomy, 2.4); anat.grp.position.set(-11, -3, 0);
+  nodePos['hub:second_brain'] = brain.grp.position;
+  nodePos['hub:anatomy'] = anat.grp.position;
+  nodePos['hub:ouroboros'] = brain.grp.position;
+  const brainLabel = textSprite('SECOND BRAIN', '#3af4c8'); brainLabel.position.set(0, 7, 0); scene.add(brainLabel);
+  const anatLabel = textSprite('ANATOMY', '#ff6ad5', 38); anatLabel.position.set(-11, 1.8, 0); anatLabel.scale.set(18,2.25,1); scene.add(anatLabel);
+  const ouro = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(7.8, .38, 12, 150),
+    new THREE.MeshBasicMaterial({color:HUB_COLORS.ouroboros, transparent:true, opacity:.8}));
+  ring.rotation.x = Math.PI/2.15;
+  const head = new THREE.Mesh(new THREE.ConeGeometry(.9, 2.3, 10), new THREE.MeshBasicMaterial({color:0xffd97a}));
+  ouro.add(ring, head); core.add(ouro);
+  const ouroLabel = textSprite('OUROBOROS', '#d4a444', 38); ouroLabel.position.set(0, -9.4, 0); ouroLabel.scale.set(18,2.25,1); scene.add(ouroLabel);
+
+  // ---- territories: tier shells as labeled provinces with borders ----
+  const tiers = [...new Set(ESTATES.map(e=>e.tier))];
+  const shellR = t => 14 + tiers.indexOf(t)*4.9;
+  const shellSpeed = t => (tiers.indexOf(t)%2===0 ? 1 : -1) * (0.016 + tiers.indexOf(t)*0.004);
+  const territoryMats = {};
+  tiers.forEach((t,ti)=>{
+    const R = shellR(t);
+    const color = TIER_COLORS[t] ?? 0x5b8dee;
+    // territory floor: translucent annulus
+    const band = new THREE.Mesh(
+      new THREE.RingGeometry(R-2.3, R+2.3, 128),
+      new THREE.MeshBasicMaterial({color, transparent:true, opacity:.045, side:THREE.DoubleSide, depthWrite:false}));
+    band.rotation.x = -Math.PI/2;
+    scene.add(band);
+    // border rims
+    [R-2.3, R+2.3].forEach(rr=>{
+      const pts = [];
+      for(let i=0;i<=128;i++){ const a=i/128*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*rr, 0, Math.sin(a)*rr)); }
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({color, transparent:true, opacity:.14})));
+    });
+    // province label at the rim
+    const lbl = textSprite(t.toUpperCase(), hex(color), 30);
+    const la = (ti/tiers.length)*Math.PI*2 + .35;
+    lbl.scale.set(12, 1.6, 1);
+    lbl.position.set(Math.cos(la)*(R+2.3), 1.6, Math.sin(la)*(R+2.3));
+    scene.add(lbl);
+    territoryMats[t] = {band: band.material, label: lbl.material};
+  });
+
+  const perTier = {}; ESTATES.forEach(e => { perTier[e.tier]=(perTier[e.tier]||0)+1; });
+  const tierSeen = {};
+  const hubPos = name => name==='anatomy' ? anat.grp.position : brain.grp.position;
+  ESTATES.forEach((e,i)=>{
+    const k = tierSeen[e.tier]=(tierSeen[e.tier]||0)+1;
+    const R = shellR(e.tier);
+    const golden = Math.PI*(3-Math.sqrt(5));
+    const y = 1 - (k/perTier[e.tier])*2;
+    const rad = Math.sqrt(Math.max(0,1-y*y));
+    const th = golden*(i*7+k*3);
+    const tilt = (tiers.indexOf(e.tier)-tiers.length/2)*.11;
+    const y0 = y*R*.6 + tilt*10;
+    const size = .68 + Math.log2(e.files+1)*.3;
+    const color = TIER_COLORS[e.tier] ?? 0x5b8dee;
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(size, 20, 20),
+      new THREE.MeshBasicMaterial({color, transparent:true, opacity:.88}));
+    const ang = th;
+    orb.position.set(Math.cos(ang)*rad*R, y0, Math.sin(ang)*rad*R);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture(hex(color), false), color, transparent:true, opacity:.3, depthWrite:false, blending:THREE.AdditiveBlending}));
+    halo.scale.setScalar(size*5.4); orb.add(halo);
+    orb.userData = {estate:e, state:'DECLARED', halo, tier:e.tier, R, rad, y0, ang, speed:shellSpeed(e.tier), bob:Math.random()*Math.PI*2};
+    nodePos[e.name] = orb.position;
+    scene.add(orb); orbs.push(orb); pickables.push(orb);
+    const hp = hubPos(e.hub);
+    const mid = orb.position.clone().lerp(hp, .5); mid.y += orb.position.distanceTo(hp)*.22;
+    const curve = new THREE.QuadraticBezierCurve3(orb.position.clone(), mid, hp.clone());
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)),
+      new THREE.LineBasicMaterial({color:HUB_COLORS[e.hub] ?? 0x3af4c8, transparent:true, opacity:.18}));
+    scene.add(line); threads.push({line, estate:e.name, hub:e.hub});
+    const pulse = new THREE.Sprite(new THREE.SpriteMaterial({map:starTex, color:HUB_COLORS[e.hub] ?? 0x3af4c8, transparent:true, opacity:.9, depthWrite:false, blending:THREE.AdditiveBlending}));
+    pulse.scale.setScalar(1.0);
+    scene.add(pulse);
+    pulses.push({pulse, curve, t:Math.random(), speed:.0016+Math.random()*.0022, dir:1, kind:'hub', estate:e.name, hub:e.hub});
+  });
+
+  const latticeOrbs = [];
+  const R_OUT = 14 + tiers.length*4.9 + 8;
+  LATTICE.forEach((s,i)=>{
+    const a = (i/LATTICE.length)*Math.PI*2;
+    const p = new THREE.Vector3(Math.cos(a)*R_OUT, Math.sin(a*2)*5, Math.sin(a)*R_OUT);
+    const orb = new THREE.Mesh(new THREE.OctahedronGeometry(1.15, 0),
+      new THREE.MeshBasicMaterial({color:0x9ffce3, transparent:true, opacity:.95}));
+    orb.position.copy(p);
+    nodePos['vertical:'+s.name] = orb.position;
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({map:glowTexture('#9ffce3', true), color:0x9ffce3, transparent:true, opacity:.5, depthWrite:false, blending:THREE.AdditiveBlending}));
+    halo.scale.setScalar(6); orb.add(halo);
+    orb.userData = {satellite:s, state:'DECLARED', halo};
+    scene.add(orb); latticeOrbs.push(orb); pickables.push(orb);
+    const lbl = textSprite(s.name.toUpperCase(), 'rgba(159,252,227,.9)', 30);
+    lbl.scale.set(11, 1.5, 1); lbl.position.copy(p).add(new THREE.Vector3(0, 2.8, 0));
+    scene.add(lbl);
+    const mid = p.clone().lerp(brain.grp.position, .5); mid.y += 8;
+    const curve = new THREE.QuadraticBezierCurve3(p, mid, brain.grp.position.clone());
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(40)),
+      new THREE.LineBasicMaterial({color:0x9ffce3, transparent:true, opacity:.18})));
+    const pulse = new THREE.Sprite(new THREE.SpriteMaterial({map:starTex, color:0x9ffce3, transparent:true, opacity:1, depthWrite:false, blending:THREE.AdditiveBlending}));
+    pulse.scale.setScalar(1.2); scene.add(pulse);
+    pulses.push({pulse, curve, t:Math.random(), speed:.003, dir:1, kind:'lattice'});
+  });
+
+  const satByName = {};
+  latticeOrbs.forEach(o=>{ satByName[o.userData.satellite.name] = o.position.clone(); });
+  const vertThreads = [];
+  VERTICALS.forEach(v=>{
+    const sat = satByName[v.id] || satByName[v.spaces.map(s=>s.split('/')[1]).find(n=>satByName[n])];
+    if(!sat) return;
+    orbs.forEach(o=>{
+      const n = o.userData.estate.name;
+      const bound = v.repos.some(r=>r.endsWith('/'+n)) || v.spaces.some(s=>s.endsWith('/'+n)) || n===v.id || n.startsWith(v.id+'-');
+      if(!bound) return;
+      const curve = new THREE.QuadraticBezierCurve3(o.position.clone(), o.position.clone().lerp(sat,.5).add(new THREE.Vector3(0,6,0)), sat.clone());
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(32)),
+        new THREE.LineBasicMaterial({color:0x64d97a, transparent:true, opacity:0}));
+      scene.add(line); vertThreads.push({line, vertical:v.id, estate:n});
+      const pulse = new THREE.Sprite(new THREE.SpriteMaterial({map:starTex, color:0x64d97a, transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending}));
+      pulse.scale.setScalar(.85); scene.add(pulse);
+      pulses.push({pulse, curve, t:Math.random(), speed:.0022, dir:1, kind:'vertical', vertical:v.id, estate:n});
+    });
+  });
+
+  const RAIN_N = 110;
+  const rainGeo = new THREE.BufferGeometry();
+  const rainPos = new Float32Array(RAIN_N*3);
+  const rainVel = [];
+  for(let i=0;i<RAIN_N;i++){
+    const r = 42+Math.random()*80, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    rainPos[i*3]=r*Math.sin(ph)*Math.cos(th); rainPos[i*3+1]=r*Math.cos(ph); rainPos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+    rainVel.push(.012+Math.random()*.03);
+  }
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos,3));
+  scene.add(new THREE.Points(rainGeo, new THREE.PointsMaterial({size:.95, map:starTex, color:0x3af4c8, transparent:true, opacity:.5, depthWrite:false, blending:THREE.AdditiveBlending})));
+
+  // ---- honest live pings ----
+  const statsEl = document.getElementById('stats');
+  let reachable = 0, probed = 0, totalProbe = 0;
+  ESTATES.forEach(e => totalProbe += (e.live||[]).length);
+  totalProbe += LATTICE.length;
+  function ping(url, onUp){
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 4500);
+    fetch(url, {mode:'no-cors', signal:ctl.signal, cache:'no-store'})
+      .then(()=>{ clearTimeout(to); onUp(); })
+      .catch(()=>{})
+      .finally(()=>{ clearTimeout(to); probed++; renderStats(); });
+  }
+  function markReachable(obj){
+    if(obj.userData.state==='REACHABLE') return;
+    obj.userData.state='REACHABLE'; reachable++;
+    obj.userData.halo.material.opacity=.85;
+    obj.userData.halo.scale.multiplyScalar(1.7);
+    obj.material.opacity = 1;
+  }
+  orbs.forEach(o=>{ (o.userData.estate.live||[]).forEach(u=>ping(u, ()=>markReachable(o))); });
+  latticeOrbs.forEach(o=>ping(o.userData.satellite.url, ()=>markReachable(o)));
+  function renderStats(){
+    statsEl.innerHTML = `<b>${ESTATES.length}</b> estates · <b>${LATTICE.length}</b> satellites · <b>${VERTICALS.length}</b> verticals<br>`+
+      `<b>${reachable}</b> reachable now · ${probed}/${totalProbe} probed<br>`+
+      `<span style="color:#d4a444">ouroboros RUNNING · ${pulses.length} synapses · kernel rain FALLING</span>`;
+  }
+  renderStats();
+
+  // ---- camera fly-to ----
+  const HOME = {pos:new THREE.Vector3(0,15,56), tgt:new THREE.Vector3(0,0,0)};
+  let camGoal = null, tgtGoal = null;
+  function flyTo(pos, offset=9){ camGoal = pos.clone().add(new THREE.Vector3(offset*.55, offset*.45, offset)); tgtGoal = pos.clone(); }
+  function flyHome(){ camGoal = HOME.pos.clone(); tgtGoal = HOME.tgt.clone(); }
+
+  // ---- trust-path mode ----
+  const pathbar = document.getElementById('pathbar');
+  let pathMode = false, pathFrom = null, pathRoute = null, pathPulses = [];
+  function clearPath(){
+    if(pathRoute){ scene.remove(pathRoute); pathRoute.geometry.dispose(); pathRoute = null; }
+    pathPulses.forEach(p=>scene.remove(p.pulse)); pathPulses = [];
+    pathFrom = null; pathbar.style.display='none';
+    orbs.forEach(o=>{ o.userData.halo.material.color.setHex(TIER_COLORS[o.userData.tier]??0x5b8dee); });
+  }
+  async function computePath(a, b){
+    pathbar.style.display='block';
+    pathbar.textContent = `computing ${a} → ${b} …`;
+    let d;
+    try { d = await (await fetch(`/api/constellation/paths?frm=${encodeURIComponent(a)}&to=${encodeURIComponent(b)}`)).json(); }
+    catch(e){ pathbar.textContent = 'UNAVAILABLE - the path engine did not answer; nothing drawn'; return; }
+    if(d.state !== 'MEASURED' || !d.connected){
+      pathbar.textContent = `${a} → ${b}: ${d.detail || 'no path'} (reported, never drawn by fiat)`;
+      return;
+    }
+    const pts = d.path.map(n => (nodePos[n] || brain.grp.position).clone());
+    const curve = new THREE.CatmullRomCurve3(pts);
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(160)),
+      new THREE.LineBasicMaterial({color:0xffd97a, transparent:true, opacity:.95}));
+    scene.add(line); pathRoute = line;
+    for(let i=0;i<4;i++){
+      const p = new THREE.Sprite(new THREE.SpriteMaterial({map:goldTex, color:0xffd97a, transparent:true, opacity:1, depthWrite:false, blending:THREE.AdditiveBlending}));
+      p.scale.setScalar(1.7); scene.add(p);
+      pathPulses.push({pulse:p, curve, t:i/4});
+    }
+    d.path.forEach(n=>{ const o = orbs.find(x=>x.userData.estate.name===n); if(o) o.userData.halo.material.color.setHex(0xffd97a); });
+    pathbar.innerHTML = `⚡ TRUST PATH · ${d.hops} hops · receipt ${d.receipt.sha256.slice(0,12)}…<br><span style="color:#e6edfb">${d.path.join(' → ')}</span>`;
+  }
+
+  // ---- controls ----
+  const ctrl = document.getElementById('controls');
+  let spotlight = null;
+  function applySpotlight(){
+    orbs.forEach(o=>{
+      const dim = spotlight && o.userData.tier!==spotlight;
+      o.material.opacity = dim ? .1 : (o.userData.state==='REACHABLE'?1:.88);
+      if(o.userData.state!=='REACHABLE') o.userData.halo.material.opacity = dim ? .04 : .3;
+    });
+    Object.entries(territoryMats).forEach(([t,m])=>{
+      const active = !spotlight || t===spotlight;
+      m.band.opacity = active ? .11 : .02;
+      m.label.opacity = active ? 1 : .15;
+    });
+    threads.forEach(t=>{ t.line.material.opacity = spotlight ? .05 : .18; });
+    vertThreads.forEach(t=>{ t.line.material.opacity = spotlight ? .3 : 0; });
+    pulses.forEach(p=>{ if(p.kind==='vertical') p.pulse.material.opacity = spotlight ? .8 : 0; });
+  }
+  [...tiers, null].forEach(t=>{
+    const b = document.createElement('button');
+    b.textContent = t ? t : 'All';
+    b.className = t ? 'dim' : '';
+    b.onclick = ()=>{ spotlight = t; applySpotlight(); };
+    ctrl.appendChild(b);
+  });
+  const pathBtn = document.createElement('button');
+  pathBtn.textContent = '⇄ Path';
+  pathBtn.className = 'dim';
+  pathBtn.onclick = ()=>{ pathMode = !pathMode; pathBtn.className = pathMode ? 'active' : 'dim'; if(!pathMode) clearPath(); };
+  ctrl.appendChild(pathBtn);
+  const stormBtn = document.createElement('button');
+  stormBtn.textContent = '⚡ Storm';
+  stormBtn.onclick = ()=>{ storm = 1; };
+  ctrl.appendChild(stormBtn);
+
+  // ---- interaction ----
+  const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2();
+  const tip = document.getElementById('tip');
+  const panel = document.getElementById('panel'); const panelBody = document.getElementById('panel-body');
+  addEventListener('pointermove', ev=>{
+    mouse.set(ev.clientX/innerWidth*2-1, -(ev.clientY/innerHeight)*2+1);
+    ray.setFromCamera(mouse, camera);
+    const hit = ray.intersectObjects(pickables)[0];
+    if(hit){
+      const u = hit.object.userData;
+      tip.style.display='block'; tip.style.left=ev.clientX+'px'; tip.style.top=ev.clientY+'px';
+      tip.textContent = (u.estate? u.estate.name : u.satellite.name) + ' · ' + u.state + (pathMode ? ' · pick for path' : '');
+      document.body.style.cursor='pointer';
+    } else { tip.style.display='none'; document.body.style.cursor='default'; }
+  });
+  addEventListener('click', ev=>{
+    if(ev.target.closest('#panel')||ev.target.closest('#controls')||ev.target.closest('#nav')) return;
+    ray.setFromCamera(mouse, camera);
+    const hit = ray.intersectObjects(pickables)[0];
+    if(pathMode){
+      if(!hit){ clearPath(); return; }
+      const u = hit.object.userData;
+      if(!u.estate){
+        pathbar.style.display='block';
+        pathbar.textContent = `${u.satellite.name} is a live satellite, not a wiring-graph node - the engine reports rather than pretends`;
+        return;
+      }
+      const name = u.estate.name;
+      if(!pathFrom){ pathFrom = name; pathbar.style.display='block'; pathbar.textContent = `path origin: ${name} — pick the destination`; return; }
+      const a = pathFrom; pathFrom = null;
+      computePath(a, name);
+      return;
+    }
+    if(!hit){ panel.classList.remove('open'); flyHome(); vertThreads.forEach(t=>t.line.material.opacity = spotlight?.3:0); return; }
+    const u = hit.object.userData;
+    const stateColor = u.state==='REACHABLE' ? '#3af4c8' : (u.state==='DECLARED' ? '#5b8dee' : '#6b7a99');
+    if(u.estate){
+      const e = u.estate;
+      const hub = HUBS[e.hub];
+      const vOf = VERTICALS.find(v=> v.repos.some(r=>r.endsWith('/'+e.name)) || v.spaces.some(s=>s.endsWith('/'+e.name)) || e.name===v.id || e.name.startsWith(v.id+'-'));
+      flyTo(hit.object.position, 8);
+      panelBody.innerHTML = `
+        <span class="tier" style="border:1px solid ${hex(TIER_COLORS[e.tier]??0x5b8dee)}55;color:${hex(TIER_COLORS[e.tier]??0x5b8dee)};background:${hex(TIER_COLORS[e.tier]??0x5b8dee)}18">${e.tier}</span>
+        <h2>${e.name}</h2>
+        <div class="files">${e.files} files · unarchived${vOf?` · wired to <b style="color:#64d97a">${vOf.name}</b>`:''}</div>
+        <div class="desc">${e.desc}</div>
+        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='REACHABLE'?' — answered a live ping':''}</div>
+        <div class="hubline">Wired into <b>${hub.label}</b> — ${hub.desc}</div>
+        <div class="links">
+          ${e.repo?`<a href="https://github.com/${e.repo}" target="_blank" rel="noopener">⌥ source · github.com/${e.repo}</a>`:''}
+          ${(e.live||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">↗ live · ${u.replace('https://','')}</a>`).join('')}
+          <a href="${hub.url}" target="_blank" rel="noopener">◈ hub · ${hub.label.toLowerCase()}</a>
+        </div>`;
+      vertThreads.forEach(t=>{ t.line.material.opacity = (t.estate===e.name) ? .65 : (spotlight?.3:0); });
+    } else {
+      const s = u.satellite;
+      flyTo(hit.object.position, 10);
+      panelBody.innerHTML = `
+        <span class="tier" style="border:1px solid #9ffce355;color:#9ffce3;background:#9ffce318">LIVE ${s.kind}</span>
+        <h2>${s.name}</h2>
+        <div class="files">outer lattice · running surface</div>
+        <div class="desc">${s.desc}</div>
+        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='REACHABLE'?' — answered a live ping':''}</div>
+        <div class="links"><a href="${s.url}" target="_blank" rel="noopener">↗ open · ${s.url.replace('https://','')}</a></div>`;
+    }
+    panel.classList.add('open');
+    threads.forEach(t=>{ t.line.material.opacity = (t.estate===(u.estate&&u.estate.name)) ? .55 : (spotlight?.05:.18); });
+  });
+  panel.querySelector('.close').onclick = ()=>{ panel.classList.remove('open'); flyHome(); };
+
+  let storm = 0;
+  setInterval(()=>{ storm = 1; }, 45000);
+
+  const clock = new THREE.Clock();
+  const tmpV = new THREE.Vector3();
+  function tick(){
+    requestAnimationFrame(tick);
+    const t = clock.getElapsedTime();
+    orbs.forEach((o,i)=>{
+      const u = o.userData;
+      u.ang += u.speed * .016;
+      o.position.set(Math.cos(u.ang)*u.rad*u.R, u.y0 + Math.sin(t*.5+u.bob)*.7, Math.sin(u.ang)*u.rad*u.R);
+    });
+    threads.forEach(td=>{
+      const o = orbs.find(x=>x.userData.estate.name===td.estate);
+      if(!o) return;
+      const hp = hubPos(td.hub);
+      const mid = tmpV.copy(o.position).lerp(hp, .5).clone(); mid.y += o.position.distanceTo(hp)*.22;
+      const curve = new THREE.QuadraticBezierCurve3(o.position.clone(), mid, hp.clone());
+      td.line.geometry.setFromPoints(curve.getPoints(40));
+    });
+    pulses.forEach(p=>{
+      if(p.estate){
+        const o = orbs.find(x=>x.userData.estate.name===p.estate);
+        if(o){
+          const hp = hubPos(p.hub || 'second_brain');
+          const end = p.kind==='vertical'&&p.vertical&&satByName[p.vertical] ? satByName[p.vertical] : hp;
+          const mid = o.position.clone().lerp(end, .5); mid.y += 6;
+          p.curve = new THREE.QuadraticBezierCurve3(o.position.clone(), mid, end.clone());
+        }
+      }
+      p.t += p.speed*(storm>0?6:1)*p.dir;
+      if(p.t>=1){p.t=1;p.dir=-1} if(p.t<=0){p.t=0;p.dir=1}
+      p.pulse.position.copy(p.curve.getPoint(p.t));
+      if(p.kind==='vertical'){
+        p.pulse.material.opacity = spotlight ? (.6 + Math.sin(t*3+p.t*10)*.3) : 0;
+      } else {
+        p.pulse.material.opacity = .55 + Math.sin(t*3 + p.t*10)*.3 + (storm>0?.4:0);
+      }
+    });
+    pathPulses.forEach(p=>{
+      p.t = (p.t + .0022*(storm>0?6:1)) % 1;
+      p.pulse.position.copy(p.curve.getPoint(p.t));
+      p.pulse.material.opacity = .7 + Math.sin(t*4 + p.t*8)*.3;
+    });
+    if(camGoal && tgtGoal){
+      camera.position.lerp(camGoal, .055); controls.target.lerp(tgtGoal, .07);
+      if(camera.position.distanceTo(camGoal) < .3){ camGoal = null; tgtGoal = null; }
+    }
+    brain.grp.scale.setScalar(1 + Math.sin(t*1.4)*.06);
+    anat.grp.rotation.y = t*.25;
+    ring.rotation.z = t*.18;
+    const a = t*.5 % 1;
+    head.position.set(Math.cos(a*Math.PI*2)*7.8, Math.sin(a*Math.PI*2)*7.8*Math.sin(Math.PI/2.15)*.2, Math.sin(a*Math.PI*2)*7.8);
+    head.lookAt(0,0,0);
+    if(storm>0) storm -= .008;
+    const pos = rainGeo.attributes.position.array;
+    for(let i=0;i<RAIN_N;i++){
+      const ix=i*3, v = rainVel[i];
+      pos[ix] -= pos[ix]*v; pos[ix+1] -= pos[ix+1]*v; pos[ix+2] -= pos[ix+2]*v;
+      const d2 = pos[ix]*pos[ix]+pos[ix+1]*pos[ix+1]+pos[ix+2]*pos[ix+2];
+      if(d2 < 16){
+        const r = 60+Math.random()*70, th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+        pos[ix]=r*Math.sin(ph)*Math.cos(th); pos[ix+1]=r*Math.cos(ph); pos[ix+2]=r*Math.sin(ph)*Math.sin(th);
+      }
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+    latticeOrbs.forEach((o,i)=>{ o.rotation.y = t*.8+i; o.rotation.x = t*.4; });
+    controls.update();
+    composer.render();
+  }
+  addEventListener('resize', ()=>{
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
+  });
+  document.getElementById('bootmsg').textContent = `${ESTATES.length} estates · ${LATTICE.length} satellites · ${tiers.length} territories · living orbits`;
+  setTimeout(()=>{ const b=document.getElementById('boot'); b.style.opacity=0; setTimeout(()=>b.remove(), 1200); }, 1300);
+  tick();
+}
+boot().catch(()=>showFallback('HOLOGRAM UNAVAILABLE.', 'The renderer could not complete startup. No live map is claimed.'));
+</script>
+</body>
+</html>

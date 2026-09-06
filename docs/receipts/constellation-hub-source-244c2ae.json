@@ -1,0 +1,80 @@
+{
+  "files": [
+    {
+      "bytes": 1519,
+      "gitBlobOid": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+      "path": ".gitattributes",
+      "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+    },
+    {
+      "bytes": 1431,
+      "gitBlobOid": "41044342e88754cff664bb04bc64435c3372122d",
+      "path": "README.md",
+      "sha256": "801950f17079d2d63957ae3ce6d3d30e6a8700c8237926f763030c4e275ae206"
+    },
+    {
+      "bytes": 57269,
+      "gitBlobOid": "cfa10175ff4f1c82892c7bae06a7dfb0341da93c",
+      "path": "app.py",
+      "sha256": "1ad3f04c0a28c2a884a3f363d7b0ffe20dfc6ebabd00b0d7f39e2a8020fe3698"
+    },
+    {
+      "bytes": 12210,
+      "gitBlobOid": "be4f2eedf3351536600fcf0c9d96a3d747b10ca5",
+      "path": "c2/index.html",
+      "sha256": "4778112fbfaf1c987b76b5a56eee7838c232b58672963ffda8d39b19b9ef66b0"
+    },
+    {
+      "bytes": 6464,
+      "gitBlobOid": "971ce2b5a9d30bcb469d0451428504c403527660",
+      "path": "crosscheck.py",
+      "sha256": "f371a9635fa298c167cf031fbb6cb0d3bf415bee6d4be153fac8b5c6185230e9"
+    },
+    {
+      "bytes": 16710,
+      "gitBlobOid": "650afa2e570bb824a4a27a4793f852adbae50d58",
+      "path": "estates.json",
+      "sha256": "4ae55c1aa042ac6193a35e87db6868d1e5902defdf64c96b75de5b5fed61a3ac"
+    },
+    {
+      "bytes": 34836,
+      "gitBlobOid": "5adb80c4e00c436cb73e0b546767d8d9a6ab63a6",
+      "path": "holo/index.html",
+      "sha256": "c55d2a4a875dc943738e284a772d37977ceb891c1781bf6945fc3e038ab9a394"
+    },
+    {
+      "bytes": 44,
+      "gitBlobOid": "c1937a17eead4ff6f93d358a42d9c8456a2e58e6",
+      "path": "requirements.txt",
+      "sha256": "6a2dc48a92d80bce809204cf1187b346d955563b9782f76602eb199e315698ee"
+    },
+    {
+      "bytes": 2607,
+      "gitBlobOid": "088be48fc42f89de7317ab8fd2b8b788cadb2dba",
+      "path": "test_runtime_contract.py",
+      "sha256": "b580553342b2c7ba014e8fbfba14e0b62142d033029f9edc6514376cd0c0a87a"
+    },
+    {
+      "bytes": 12744,
+      "gitBlobOid": "01c1970f1676b24a848827e4836988592bdd7c27",
+      "path": "tests/test_app.py",
+      "sha256": "a1d9c8c0ad60754be227d4397009bf9b5480f41c3eeaaeef2ac1d3ac0478e759"
+    },
+    {
+      "bytes": 9166,
+      "gitBlobOid": "9b4cf52e5d511d40bf2fc785d6f899dce3a5fca3",
+      "path": "verticals.json",
+      "sha256": "60c0712bb1c3f5279bb3df48b01beec915987478fd8bbcba81a5e0197398277a"
+    }
+  ],
+  "hardware": {
+    "current": "cpu-basic",
+    "requested": "cpu-basic"
+  },
+  "observedAt": "2026-09-06T15:32:05Z",
+  "repo": "SZLHOLDINGS/szl-constellation",
+  "runtimeRevision": "244c2ae32d3d1a515e46498f635f8ff1067c6418",
+  "runtimeStage": "RUNNING",
+  "schema": "szl.constellation-hub-source/v1",
+  "sourceRevision": "244c2ae32d3d1a515e46498f635f8ff1067c6418"
+}
