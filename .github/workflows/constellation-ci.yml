@@ -52,7 +52,8 @@ jobs:
             space/test_runtime_contract.py \
             space/tests/test_app.py \
             tools/verify_constellation.py \
-            tools/publish_constellation.py
+            tools/publish_constellation.py \
+            tools/run_publish_constellation.py
 
       - name: Run recovered application contracts
         working-directory: space
@@ -65,6 +66,7 @@ jobs:
         run: |
           python -m pip check
           find . -type d -name __pycache__ -prune -exec rm -rf {} +
+          find . -type d -name .pytest_cache -prune -exec rm -rf {} +
           find . -type f \( -name '*.pyc' -o -name '*.pyo' \) -delete
           git diff --check
           test -z "$(git status --porcelain)"
