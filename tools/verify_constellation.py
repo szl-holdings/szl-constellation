@@ -12,6 +12,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SPACE = ROOT / "space"
+PUBLISH_WORKFLOW = ROOT / ".github" / "workflows" / "publish-constellation-space.yml"
+CREDENTIAL_SELECTOR_REVISION = "bedcd3c77b5cf745dcc1490ac503e30397633227"
 
 RUNTIME_REQUIREMENTS = (
     "gradio",
@@ -106,6 +108,59 @@ def listener_contract(path: Path) -> dict[str, int | bool]:
     }
 
 
+def publisher_credential_contract(path: Path) -> dict[str, object]:
+    """Prove the publisher selects and transports credentials fail-closed."""
+
+    text = path.read_text(encoding="utf-8")
+    required = (
+        "id-token: write",
+        "repository: szl-holdings/.github",
+        f"ref: {CREDENTIAL_SELECTOR_REVISION}",
+        ".shared-github/.github/scripts/acquire_hf_publisher_token.py",
+        "--target-repo SZLHOLDINGS/szl-constellation",
+        "--target-type space",
+        "--oidc-resource spaces/SZLHOLDINGS/szl-constellation",
+        '--token-file "${RUNNER_TEMP}/constellation-hf-token"',
+        "HF_ORG_TOKEN_CANDIDATE",
+        "HF_ORG_TOKEN1_CANDIDATE",
+        "HF_WRITE_TOKEN_CANDIDATE",
+        "HF_TOKEN_CANDIDATE",
+        "HUGGINGFACE_TOKEN_CANDIDATE",
+        "HUGGING_FACE_HUB_TOKEN_CANDIDATE",
+        'token_file="${RUNNER_TEMP}/constellation-hf-token"',
+        "HF_TOKEN=\"$(tr -d '\\r\\n' < \"$token_file\")\"",
+        "python tools/run_publish_constellation.py",
+        "artifacts/constellation-publisher-credential.json",
+    )
+    missing = [marker for marker in required if marker not in text]
+    if missing:
+        raise AssertionError(f"publisher credential contract missing markers: {missing}")
+    forbidden = (
+        "HF_TOKEN: ${{ secrets.HF_TOKEN }}",
+        "--allow-create",
+        "echo $HF_TOKEN",
+        "set -x",
+    )
+    present = [marker for marker in forbidden if marker in text]
+    if present:
+        raise AssertionError(f"publisher credential contract contains forbidden markers: {present}")
+    if text.count("acquire_hf_publisher_token.py") != 1:
+        raise AssertionError("publisher must use exactly one credential selector invocation")
+    if text.count("run_publish_constellation.py") != 2:
+        raise AssertionError(
+            "publisher entrypoint must appear once in compilation and once in the scoped publish step"
+        )
+    return {
+        "valid": True,
+        "trustedPublisherRequested": True,
+        "fallbackCandidateCount": 6,
+        "selectorRevision": CREDENTIAL_SELECTOR_REVISION,
+        "tokenTransport": "RESTRICTED_EPHEMERAL_FILE",
+        "jobEnvironmentExported": False,
+        "target": "SZLHOLDINGS/szl-constellation",
+    }
+
+
 def verify() -> dict[str, object]:
     missing = [relative for relative in REQUIRED_RUNTIME_FILES if not (SPACE / relative).is_file()]
     if missing:
@@ -133,6 +188,8 @@ def verify() -> dict[str, object]:
     listener = listener_contract(SPACE / "app.py")
     if not listener["valid"]:
         raise AssertionError(f"single-listener contract failed: {listener}")
+
+    publisher = publisher_credential_contract(PUBLISH_WORKFLOW)
 
     app_text = (SPACE / "app.py").read_text(encoding="utf-8")
     for route in (
@@ -162,6 +219,7 @@ def verify() -> dict[str, object]:
         "runtimePins": runtime_pins,
         "testPins": test_pins,
         "publisherPins": publish_pins,
+        "publisherCredentialContract": publisher,
         "listener": listener,
         "managedFileCount": len(managed_files),
         "managedFilesSha256": digests,
