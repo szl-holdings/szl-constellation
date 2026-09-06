@@ -215,6 +215,7 @@ jobs:
             space/crosscheck.py \
             space/test_runtime_contract.py \
             space/tests/test_app.py
+          find space -type d -name __pycache__ -prune -exec rm -rf {} +
           git diff --check
 
       - name: Commit exact source import and self-remove
