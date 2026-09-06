@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KILLINCHU C2 — Synthetic Operating Picture</title>
+<style>
+  html,body{margin:0;height:100%;background:#060502;overflow:hidden;font-family:ui-sans-serif,system-ui,sans-serif;color:#f4e9d4}
+  #scope{position:fixed;inset:0 340px 0 0}
+  #rail{position:fixed;top:0;right:0;width:340px;height:100%;background:rgba(8,6,3,.96);border-left:1px solid rgba(255,180,84,.25);display:flex;flex-direction:column;z-index:10}
+  #rail .head{padding:16px 18px;border-bottom:1px solid rgba(255,180,84,.2)}
+  #rail .head h2{margin:0;font:800 15px ui-monospace,monospace;letter-spacing:.12em;color:#ffb454}
+  #rail .head .sub{font:600 10.5px ui-monospace,monospace;color:#8a7a5c;margin-top:4px;letter-spacing:.08em}
+  #chain{flex:1;overflow-y:auto;padding:12px}
+  #chain .ev{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;font:600 10.5px ui-monospace,monospace;color:#c9b896;border:1px solid transparent}
+  #chain .ev.new{border-color:rgba(255,180,84,.4);background:rgba(255,180,84,.06);animation:flash 1.2s ease-out}
+  @keyframes flash{from{background:rgba(255,180,84,.3)}to{background:rgba(255,180,84,.06)}}
+  #chain .ev .h{color:#ffb454}
+  #chain .ev.bad{color:#ff5d73;border-color:rgba(255,93,115,.4)}
+  #chain .ev .dot{width:7px;height:7px;border-radius:50%;flex:none}
+  #ticker{border-top:1px solid rgba(255,180,84,.2);padding:10px 14px;font:600 10.5px ui-monospace,monospace;color:#8a7a5c;min-height:44px}
+  #hud{position:fixed;top:16px;left:18px;z-index:20;pointer-events:none}
+  #hud .k{font:700 10px ui-monospace,monospace;letter-spacing:.4em;color:#8a7a5c;text-transform:uppercase}
+  #hud .t{font-size:22px;font-weight:850;margin-top:4px;color:#f4e9d4}
+  #hud .t span{color:#ffb454}
+  #truth{position:fixed;left:18px;bottom:16px;z-index:20;font:700 10.5px ui-monospace,monospace;letter-spacing:.1em;color:#d4a444;border:1px solid rgba(212,164,68,.45);background:rgba(212,164,68,.08);border-radius:9px;padding:9px 13px;max-width:400px;line-height:1.7}
+  #stats{position:fixed;top:16px;right:356px;z-index:20;text-align:right;font:600 11px ui-monospace,monospace;color:#8a7a5c;line-height:1.9;pointer-events:none}
+  #stats b{color:#f4e9d4}
+  #ctl{position:fixed;bottom:16px;right:356px;z-index:25;display:flex;gap:8px}
+  #ctl button{background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.4);color:#ffb454;font:700 10.5px ui-monospace,monospace;letter-spacing:.12em;padding:10px 14px;border-radius:9px;cursor:pointer;text-transform:uppercase;transition:all .2s}
+  #ctl button:hover{background:rgba(255,180,84,.18);box-shadow:0 0 20px rgba(255,180,84,.2)}
+  #ctl input{width:70px;background:rgba(255,255,255,.04);border:1px solid rgba(255,180,84,.3);color:#f4e9d4;border-radius:9px;padding:9px 10px;font:600 11px ui-monospace,monospace}
+  #fallback{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#060502;z-index:50;text-align:center;padding:30px}
+  #fallback .box{max-width:520px;border:1px solid rgba(212,164,68,.4);border-radius:14px;padding:26px;color:#d4a444;font-size:13.5px;line-height:1.7}
+  @media (max-width:900px){ #scope{inset:0} #rail{display:none} #stats,#ctl{right:16px} }
+</style>
+</head>
+<body>
+<div id="scope"></div>
+<div id="hud"><div class="k">Killinchu · Counter-UAS Reference</div><div class="t">C2 <span>Operating Picture</span></div></div>
+<div id="stats"></div>
+<div id="truth">PUBLIC SYNTHETIC — simulated tracks, no public effector. Every event is hash-chained and recomputable. Λ advisory only. ROE evaluation never executes.</div>
+<div id="rail">
+  <div class="head"><h2>HASH CHAIN</h2><div class="sub" id="chainstate">every interdiction-relevant event, linked</div></div>
+  <div id="chain"></div>
+  <div id="ticker">awaiting scenario…</div>
+</div>
+<div id="ctl">
+  <input id="seed" value="7" title="scenario seed">
+  <button id="run">▶ Run scenario</button>
+  <button id="verify">⛓ Verify chain</button>
+</div>
+<div id="fallback"><div class="box"><b>SCOPE UNAVAILABLE.</b><br>WebGL or the three.js CDN is unreachable from this browser. The chain rail and the API at <a href="/api/c2/scenario?seed=7" style="color:#d4a444">/api/c2/scenario</a> still compute honestly.</div></div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+const amber = '#ffb454', red = '#ff5d73', teal = '#3af4c8', dim = '#5c5142';
+let renderer, scene, camera, sweep, tracks3 = {}, trails = {}, clock;
+let webgl = true;
+try {
+  const THREE = await import('three');
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  const el = document.getElementById('scope');
+  renderer.setSize(el.clientWidth, el.clientHeight);
+  el.appendChild(renderer.domElement);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x060502);
+  camera = new THREE.OrthographicCamera(-1,1,1,-1,.1,100);
+  const fit = ()=>{ const a = el.clientWidth/el.clientHeight; camera.left=-1.08*a; camera.right=1.08*a; camera.top=1.08; camera.bottom=-1.08; camera.updateProjectionMatrix(); };
+  fit(); addEventListener('resize', ()=>{ renderer.setSize(el.clientWidth, el.clientHeight); fit(); });
+  camera.position.set(0,10,0); camera.up.set(0,0,-1); camera.lookAt(0,0,0);
+  // range rings + azimuth spokes
+  const ringMat = new THREE.LineBasicMaterial({color:0x8a6a34, transparent:true, opacity:.5});
+  [0.25,0.5,0.75,1.0].forEach(r=>{
+    const pts=[]; for(let i=0;i<=90;i++){const a=i/90*Math.PI*2; pts.push(new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r));}
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
+  });
+  for(let i=0;i<12;i++){
+    const a=i/12*Math.PI*2;
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(Math.cos(a),0,Math.sin(a))]), new THREE.LineBasicMaterial({color:0x8a6a34, transparent:true, opacity:.18})));
+  }
+  // sensor cones: four edge sensors watching inward
+  const coneMat = new THREE.MeshBasicMaterial({color:0x3af4c8, transparent:true, opacity:.05, side:THREE.DoubleSide});
+  [0.4, 1.7, 3.0, 4.6].forEach(a=>{
+    const cone = new THREE.Mesh(new THREE.CircleGeometry(0.62, 24, a-0.35, 0.7), coneMat);
+    cone.rotation.x = -Math.PI/2; cone.position.y = .001; scene.add(cone);
+    const sx = Math.cos(a)*1.0, sz = Math.sin(a)*1.0;
+    const s = new THREE.Mesh(new THREE.OctahedronGeometry(.03,0), new THREE.MeshBasicMaterial({color:0x3af4c8}));
+    s.position.set(sx,.01,sz); scene.add(s);
+  });
+  // the sweep
+  sweep = new THREE.Mesh(new THREE.CircleGeometry(1.0, 48, 0, 0.5),
+    new THREE.MeshBasicMaterial({color:0xffb454, transparent:true, opacity:.16, side:THREE.DoubleSide}));
+  sweep.rotation.x = -Math.PI/2; sweep.position.y = .002; scene.add(sweep);
+  window.__T = THREE; window.__scene = scene;
+  clock = new THREE.Clock();
+  (function tick(){ requestAnimationFrame(tick); sweep.rotation.z = -clock.getElapsedTime()*0.9; renderer.render(scene, camera); })();
+} catch(e) {
+  webgl = false;
+  document.getElementById('fallback').style.display='flex';
+}
+
+const chainEl = document.getElementById('chain');
+const ticker = document.getElementById('ticker');
+const statsEl = document.getElementById('stats');
+const chainstate = document.getElementById('chainstate');
+let chain = [], playing = false;
+
+async function sha256hex(s){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+function canon(o){ return JSON.stringify(o, Object.keys(o).sort()).replace(/\s/g,''); }
+
+function spawnTrack(T, ev){
+  if(!webgl) return;
+  const THREE = window.__T;
+  const clsColor = ev.cls==='friendly' ? 0x3af4c8 : ev.cls==='hostile-suspect' ? 0xff5d73 : 0xffb454;
+  const m = new THREE.Mesh(new THREE.SphereGeometry(.022, 12, 12), new THREE.MeshBasicMaterial({color:clsColor}));
+  window.__scene.add(m);
+  const tg = new THREE.BufferGeometry();
+  const tl = new THREE.Line(tg, new THREE.LineBasicMaterial({color:clsColor, transparent:true, opacity:.45}));
+  window.__scene.add(tl);
+  tracks3[ev.track] = {mesh:m, trail:tl, pts:[]};
+}
+function moveTrack(ev){
+  if(!webgl || !tracks3[ev.track]) return;
+  const x = (ev.r/100)*Math.cos(ev.theta), z = (ev.r/100)*Math.sin(ev.theta);
+  const tr = tracks3[ev.track];
+  tr.mesh.position.set(x, .012, z);
+  tr.pts.push(new window.__T.Vector3(x,.012,z));
+  if(tr.pts.length > 40) tr.pts.shift();
+  tr.trail.geometry.setFromPoints(tr.pts);
+  const clsColor = ev.cls==='friendly' ? 0x3af4c8 : ev.cls==='hostile-suspect' ? 0xff5d73 : 0xffb454;
+  tr.mesh.material.color.setHex(clsColor); tr.trail.material.color.setHex(clsColor);
+}
+function addChainEvent(ev, verified){
+  const d = document.createElement('div');
+  d.className = 'ev new' + (verified===false ? ' bad' : '');
+  const c = ev.cls==='friendly' ? teal : ev.cls==='hostile-suspect' ? red : amber;
+  d.innerHTML = `<span class="dot" style="background:${verified===false?red:c}"></span><span>#${ev.seq} ${ev.kind}</span><span class="h">${ev.chain_hash.slice(0,10)}</span>`;
+  d.title = `t=${ev.t}s track=${ev.track} r=${ev.r} θ=${ev.theta}`;
+  chainEl.prepend(d);
+  setTimeout(()=>d.classList.remove('new'), 1300);
+  ticker.textContent = `t+${ev.t}s · track ${ev.track} · ${ev.kind}${ev.kind==='classify'?' → '+ev.cls:''} · ${ev.chain_hash.slice(0,16)}…`;
+}
+function renderStats(verified){
+  const tids = new Set(chain.map(e=>e.track));
+  statsEl.innerHTML = `<b>${chain.length}</b> events chained · <b>${tids.size}</b> tracks<br>`+
+    (verified===null?'':verified?`<span style="color:${teal}">CHAIN VERIFIED locally</span>`:`<span style="color:${red}">CHAIN BROKEN</span>`);
+}
+async function verifyLocal(){
+  let prev = '0'.repeat(64);
+  for(const ev of chain){
+    if(ev.prev_hash !== prev) return false;
+    const payload = {};
+    for(const k of Object.keys(ev)) if(k!=='prev_hash' && k!=='chain_hash') payload[k]=ev[k];
+    const exp = await sha256hex(prev + canon(payload));
+    if(exp !== ev.chain_hash) return false;
+    prev = ev.chain_hash;
+  }
+  return true;
+}
+async function runScenario(){
+  if(playing) return;
+  playing = true;
+  chainEl.innerHTML=''; chain=[]; tracks3={};
+  if(webgl && window.__scene){ const rm=[]; window.__scene.traverse(o=>{ if(o.userData&&o.userData.tk) rm.push(o); }); }
+  const seed = document.getElementById('seed').value || '7';
+  let d;
+  try { d = await (await fetch(`/api/c2/scenario?seed=${encodeURIComponent(seed)}&n=28`)).json(); }
+  catch(e){ ticker.textContent = 'UNAVAILABLE - scenario engine did not answer'; playing=false; return; }
+  if(d.state !== 'MEASURED'){ ticker.textContent = 'UNAVAILABLE - ' + (d.detail||'engine'); playing=false; return; }
+  chainstate.textContent = `scenario seed=${d.seed} · ${d.events.length} events · terminal ${d.terminal.slice(0,12)}… · receipt ${d.receipt.sha256.slice(0,12)}…`;
+  for(const ev of d.events){
+    chain.push(ev);
+    if(ev.kind==='spawn') spawnTrack(null, ev); else moveTrack(ev);
+    addChainEvent(ev, null);
+    renderStats(null);
+    await new Promise(r=>setTimeout(r, 380));
+  }
+  const ok = await verifyLocal();
+  chain.forEach(ev=>{ /* mark verified state on nodes */ });
+  renderStats(ok);
+  chainstate.textContent += ok ? ' · LOCAL RECOMPUTE PASS' : ' · LOCAL RECOMPUTE FAIL';
+  playing = false;
+}
+document.getElementById('run').onclick = runScenario;
+document.getElementById('verify').onclick = async ()=>{
+  if(!chain.length){ ticker.textContent='nothing to verify - run a scenario first'; return; }
+  const ok = await verifyLocal();
+  renderStats(ok);
+  try {
+    const r = await fetch('/api/c2/verify', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({events: chain})});
+    const d = await r.json();
+    ticker.textContent = `server recompute: ${d.state} · ${d.detail || ('terminal ' + (d.terminal||''))}`;
+  } catch(e){ ticker.textContent = 'server recompute UNAVAILABLE - local verdict stands: ' + (ok?'PASS':'FAIL'); }
+};
+</script>
+</body>
+</html>

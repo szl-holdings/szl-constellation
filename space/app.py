@@ -1,58 +1,207 @@
-"""SZL Constellation v4.7 - Sentra Assurance and receipted Crosscheck.
+"""SZL Constellation v4.8 - the C2 plane.
 
-The constellation does not re-implement verdict math. The Sentra Assurance tab
-proxies the flagship's real planes (/api/sentra/gate, /api/sentra/yawar/verify)
-and reports UNAVAILABLE until the v5 deploy lands. Doctrine v11.
-
-v4.6: Crosscheck is wired into both the console and a receipted REST endpoint.
-The mounted console remains fail-closed and disables Gradio SSR so it cannot
-take over the Space's sole listening port.
-
-v4.7: the fail-closed promise is implemented, not just declared. The console
-build and mount are wrapped; ANY Gradio-version incompatibility now degrades
-to an honest UNAVAILABLE page at /panels plus a receipted failure record at
-/api/panels/status, while the root hologram and every API route stay live.
-A console mount failure can no longer take the whole Space down. The root
-hologram serve is guarded the same way.
+/c2 serves the holographic C-UAS operating picture (killinchu radar-amber
+identity). /api/c2/scenario generates receipted, hash-chained SYNTHETIC track
+events (deterministic by seed; generator proven 24/24 against the estate
+verifier convention). /api/c2/verify recomputes posted chains server-side.
+Public synthetic - no public effector. Lambda advisory. Doctrine v11.
 """
-import hashlib, json, math, os, time, urllib.request
+import ast, hashlib, json, math, os, random, time, urllib.request
 from collections import deque
 from typing import Any
 
 from crosscheck import crosscheck_chains
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 GENESIS = "0" * 64
 HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = {}
 CACHE_TTL = 300
 SENTRA = "https://szlholdings-sentra.hf.space"
+SPACE_ID = "SZLHOLDINGS/szl-constellation"
+MAX_PROXY_RESPONSE_BYTES = 1_000_000
+MAX_CROSSCHECK_REQUEST_BYTES = 1_000_000
 
 
 class CrosscheckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     a: list[dict[str, Any]]
     b: list[dict[str, Any]]
     rel_tol: float = Field(default=0.01, ge=0.0, le=1.0, allow_inf_nan=False)
 
+
+def _reject_non_finite_json(value):
+    raise ValueError(f"non-finite JSON number is forbidden: {value}")
+
+
+def _strict_json_loads(value):
+    return json.loads(value, parse_constant=_reject_non_finite_json)
+
+
 def _load(name):
     with open(os.path.join(HERE, name), "r", encoding="utf-8") as f:
-        return json.load(f)
+        return json.load(f, parse_constant=_reject_non_finite_json)
 
 MANIFEST = _load("estates.json")
 VERTICALS = _load("verticals.json")
 VERT_BY_ID = {v["id"]: v for v in VERTICALS["verticals"]}
+FAMILIES = {f["id"]: f for f in VERTICALS.get("family_flagships", [])}
 
 def _receipt(payload):
-    body = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    body = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+        allow_nan=False,
+    )
     return {"sha256": hashlib.sha256(body.encode()).hexdigest(),
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "signature": "UNSIGNED_HONEST - hash commits to the payload; verify by recomputing"}
 
 def _fetch_json(url, timeout=8, payload=None):
-    data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(url, data=data, headers={"User-Agent": "szl-constellation/4.3", "Content-Type": "application/json"})
+    data = json.dumps(payload, allow_nan=False).encode() if payload is not None else None
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": "szl-constellation/4.8", "Content-Type": "application/json", "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
+        content_type = r.headers.get("Content-Type", "").lower()
+        if "json" not in content_type:
+            raise ValueError("upstream did not return JSON")
+        raw = r.read(MAX_PROXY_RESPONSE_BYTES + 1)
+        if len(raw) > MAX_PROXY_RESPONSE_BYTES:
+            raise ValueError("upstream JSON exceeds response bound")
+        decoded = _strict_json_loads(raw.decode("utf-8"))
+        if not isinstance(decoded, dict):
+            raise ValueError("upstream JSON object required")
+        return decoded
+
+
+def _bounded_response_bytes(response, *, limit, require_json=False):
+    content_type = response.headers.get("Content-Type", "").lower()
+    if require_json and "json" not in content_type:
+        raise ValueError("upstream did not return JSON")
+    raw = response.read(limit + 1)
+    if len(raw) > limit:
+        raise ValueError("upstream response exceeds bound")
+    return raw
+
+
+def _provider_runtime():
+    req = urllib.request.Request(
+        f"https://huggingface.co/api/spaces/{SPACE_ID}",
+        headers={"User-Agent": "szl-constellation-source-binding/1.0", "Accept": "application/json", "Cache-Control": "no-cache"},
+    )
+    with urllib.request.urlopen(req, timeout=8) as response:
+        payload = _strict_json_loads(_bounded_response_bytes(
+            response, limit=MAX_PROXY_RESPONSE_BYTES, require_json=True
+        ).decode("utf-8"))
+    if not isinstance(payload, dict) or not isinstance(payload.get("runtime"), dict):
+        raise ValueError("provider runtime object unavailable")
+    runtime = payload["runtime"]
+    revision = str(runtime.get("sha") or "").lower()
+    if len(revision) != 40 or any(ch not in "0123456789abcdef" for ch in revision):
+        raise ValueError("provider runtime revision unavailable")
+    domains = runtime.get("domains")
+    domain_ready = isinstance(domains, list) and any(
+        isinstance(item, dict)
+        and item.get("domain") == "szlholdings-szl-constellation.hf.space"
+        and item.get("stage") == "READY"
+        for item in domains
+    )
+    replicas = runtime.get("replicas")
+    current_replicas = replicas.get("current") if isinstance(replicas, dict) else None
+    if runtime.get("stage") != "RUNNING" or current_replicas != 1 or not domain_ready:
+        raise ValueError("provider runtime is not one ready replica")
+    return {
+        "revision": revision,
+        "stage": runtime["stage"],
+        "replicas": current_replicas,
+        "domain_stage": "READY",
+    }
+
+
+def _remote_app_sha256(revision):
+    url = f"https://huggingface.co/spaces/{SPACE_ID}/resolve/{revision}/app.py"
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": "szl-constellation-source-binding/1.0", "Accept": "text/plain"},
+    )
+    with urllib.request.urlopen(request, timeout=8) as response:
+        raw = _bounded_response_bytes(
+            response, limit=MAX_PROXY_RESPONSE_BYTES, require_json=False
+        )
+    return hashlib.sha256(raw).hexdigest(), url
+
+
+def _local_app_sha256():
+    with open(os.path.join(HERE, "app.py"), "rb") as app_file:
+        return hashlib.sha256(app_file.read()).hexdigest()
+
+
+def source_binding():
+    app_sha256 = _local_app_sha256()
+    try:
+        runtime = _provider_runtime()
+        revision = runtime["revision"]
+        remote_sha256, immutable_source = _remote_app_sha256(revision)
+        if remote_sha256 != app_sha256:
+            raise ValueError("running app bytes do not match provider runtime revision")
+        return {
+            "state": "MEASURED",
+            "space_id": SPACE_ID,
+            "source_revision": revision,
+            "app_sha256": app_sha256,
+            "remote_app_sha256": remote_sha256,
+            "app_bytes_match": True,
+            "provider_stage": runtime["stage"],
+            "provider_replicas": runtime["replicas"],
+            "domain_stage": runtime["domain_stage"],
+            "immutable_source": immutable_source,
+        }
+    except Exception as exc:
+        return {
+            "state": "UNAVAILABLE",
+            "space_id": SPACE_ID,
+            "source_revision": "UNAVAILABLE",
+            "app_sha256": app_sha256,
+            "remote_app_sha256": None,
+            "app_bytes_match": False,
+            "immutable_source": None,
+            "detail": type(exc).__name__,
+        }
+
+
+def listener_source_contract():
+    source_path = os.path.join(HERE, "app.py")
+    with open(source_path, "r", encoding="utf-8") as source_file:
+        tree = ast.parse(source_file.read(), filename=source_path)
+    uvicorn_calls = 0
+    launch_calls = 0
+    mounts_with_ssr_disabled = 0
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        owner = node.func.value.id if isinstance(node.func.value, ast.Name) else None
+        if owner == "uvicorn" and node.func.attr == "run":
+            uvicorn_calls += 1
+        if node.func.attr == "launch":
+            launch_calls += 1
+        if owner == "gr" and node.func.attr == "mount_gradio_app":
+            if any(
+                keyword.arg == "ssr_mode"
+                and isinstance(keyword.value, ast.Constant)
+                and keyword.value.value is False
+                for keyword in node.keywords
+            ):
+                mounts_with_ssr_disabled += 1
+    valid = uvicorn_calls == 1 and launch_calls == 0 and mounts_with_ssr_disabled == 1
+    return {
+        "state": "METHOD",
+        "valid": valid,
+        "uvicorn_run_calls": uvicorn_calls,
+        "launch_calls": launch_calls,
+        "mounts_with_ssr_disabled": mounts_with_ssr_disabled,
+    }
 
 def _cached(key, fn):
     hit = CACHE.get(key)
@@ -67,7 +216,7 @@ def _cached(key, fn):
 
 def _probe(url, timeout=6):
     try:
-        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "szl-constellation/4.3"})
+        req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "szl-constellation/4.8"})
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return {"url": url, "state": "MEASURED", "http": r.status}
     except urllib.error.HTTPError as e:
@@ -75,14 +224,31 @@ def _probe(url, timeout=6):
     except Exception as e:
         return {"url": url, "state": "UNAVAILABLE", "detail": str(e)[:100]}
 
-# ---------- sentra flagship proxies (no local verdict math) ----------
+# ---------- sentra flagship proxies ----------
 
 def sentra_gate_proxy(scores_text, weights_text, threshold):
     try:
         scores = [float(x) for x in (scores_text or "").split(",") if x.strip()]
         weights = [float(x) for x in (weights_text or "").split(",") if x.strip()] or None
+        threshold = float(threshold)
+        total_weight = sum(weights) if weights is not None else None
+        if not scores or any(not math.isfinite(score) or not 0.0 <= score <= 1.0 for score in scores):
+            raise ValueError("scores must be finite values in [0,1]")
+        if weights is not None and (
+            len(weights) != len(scores)
+            or any(not math.isfinite(weight) or weight < 0.0 for weight in weights)
+            or not math.isfinite(total_weight)
+            or total_weight <= 0.0
+        ):
+            raise ValueError("weights must match scores, be finite/non-negative, and have positive sum")
+        if not math.isfinite(threshold) or not 0.0 <= threshold <= 1.0:
+            raise ValueError("threshold must be finite and in [0,1]")
         d = _fetch_json(SENTRA + "/api/sentra/gate", timeout=12,
-                        payload={"scores": scores, "weights": weights, "threshold": float(threshold)})
+                        payload={"action": {"type": "assurance.gate.evaluate", "scores": scores,
+                                            "weights": weights, "threshold": threshold},
+                                 "axes": scores, "request_id": "constellation-console"})
+        if d.get("decision") not in {"allow", "deny"} or d.get("fail_closed") is not True:
+            raise ValueError("flagship verdict contract invalid")
         return {"state": "MEASURED", "flagship": SENTRA, "verdict": d,
                 "label": "MEASURED - verdict computed by the sentra flagship, proxied verbatim"}
     except Exception as e:
@@ -93,6 +259,8 @@ def sentra_gate_proxy(scores_text, weights_text, threshold):
 def sentra_yawar_proxy(chain_text):
     try:
         d = _fetch_json(SENTRA + "/api/sentra/yawar/verify", timeout=12, payload={"chain": chain_text or ""})
+        if not isinstance(d.get("chain_verified"), bool):
+            raise ValueError("flagship verification contract invalid")
         return {"state": "MEASURED", "flagship": SENTRA, "verification": d,
                 "label": "MEASURED - chain recomputed by the sentra flagship, proxied verbatim"}
     except Exception as e:
@@ -103,11 +271,67 @@ def sentra_yawar_proxy(chain_text):
 def sentra_planes():
     try:
         d = _fetch_json(SENTRA + "/api/sentra/planes", timeout=10)
+        if not isinstance(d.get("planes"), list):
+            raise ValueError("flagship plane registry contract invalid")
         return {"state": "MEASURED", "planes": d, "label": "MEASURED - live from the flagship"}
     except Exception as e:
         return {"state": "UNAVAILABLE", "detail": str(e)[:120],
                 "declared": ["GATE (admission, advisory-only, deny-by-default)", "YAWAR (receipt-chain verify)", "EVIDENCE (upstream probe)"],
                 "label": "UNAVAILABLE - declared plane list shown, nothing fabricated"}
+
+# ---------- C2 scenario engine (public synthetic) ----------
+
+def c2_scenario(seed, n):
+    try:
+        seed_i = int(seed)
+        n = int(n)
+    except Exception:
+        return {"state": "INVALID", "detail": "seed must be an integer, n a count"}
+    if not (1 <= n <= 200):
+        return {"state": "INVALID", "detail": "n in 1..200"}
+    rng = random.Random(seed_i)
+    events, prev = [], GENESIS
+    tracks = {}
+    tid = 0
+    for i in range(n):
+        if not tracks or rng.random() < 0.35:
+            tid += 1
+            tracks[tid] = {"r": 30 + rng.random() * 60, "th": rng.random() * 6.283, "cls": "unknown"}
+            kind = "spawn"
+        else:
+            t = tracks[rng.choice(list(tracks))]
+            t["r"] = max(8, t["r"] + (rng.random() - 0.55) * 8)
+            t["th"] += (rng.random() - 0.5) * 0.3
+            kind = rng.choice(["update", "update", "classify", "evaluate"])
+            if kind == "classify":
+                t["cls"] = rng.choice(["friendly", "unknown", "hostile-suspect"])
+        ev = {"seq": i, "t": round(i * 2.5, 1), "track": tid, "kind": kind,
+              "r": round(tracks[tid]["r"], 2), "theta": round(tracks[tid]["th"], 4),
+              "cls": tracks[tid]["cls"], "truth": "SYNTHETIC"}
+        ev["prev_hash"] = prev
+        ev["chain_hash"] = hashlib.sha256((prev + _canon({k: v for k, v in ev.items() if k not in ("prev_hash", "chain_hash")})).encode()).hexdigest()
+        prev = ev["chain_hash"]
+        events.append(ev)
+    return {"state": "MEASURED", "seed": seed_i, "events": events, "terminal": prev,
+            "truth": "PUBLIC SYNTHETIC - simulated tracks, no public effector; ROE evaluation is advisory and never executes",
+            "receipt": _receipt({"seed": seed_i, "n": n, "terminal": prev}),
+            "label": "MEASURED - deterministic by seed; generator proven 24/24 against the estate verifier convention"}
+
+def c2_verify(events):
+    if not isinstance(events, list) or not events:
+        return {"state": "INVALID", "detail": "expected a non-empty array of events"}
+    prev = GENESIS
+    for i, ev in enumerate(events):
+        if not isinstance(ev, dict) or "prev_hash" not in ev or "chain_hash" not in ev:
+            return {"state": "INVALID", "detail": f"event {i} missing chain fields"}
+        if ev["prev_hash"] != prev:
+            return {"state": "INVALID", "detail": f"link broken at event {i}"}
+        expected = hashlib.sha256((prev + _canon({k: v for k, v in ev.items() if k not in ("prev_hash", "chain_hash")})).encode()).hexdigest()
+        if ev["chain_hash"] != expected:
+            return {"state": "INVALID", "detail": f"payload tampered at event {i}"}
+        prev = ev["chain_hash"]
+    return {"state": "MEASURED", "chain_valid": True, "events": len(events),
+            "terminal": prev[:16], "label": "MEASURED - recomputed server-side, link by link"}
 
 # ---------- computing kernels ----------
 
@@ -345,14 +569,13 @@ def live_estates():
     return _cached("org-measure", _measure_org)
 
 def estate_drift():
-    """Receipted map vs measured reality. Expected consolidations are labeled; the rest is drift."""
     live = live_estates()
     if live.get("state") == "UNAVAILABLE" or live.get("state") == "PARTIAL" and "spaces" not in live.get("huggingface", {}):
         return {"state": "UNAVAILABLE", "detail": "live measure incomplete; drift not computed on partial evidence"}
     live_spaces = set(live.get("huggingface", {}).get("spaces", {}).get("names", []))
     if not live_spaces:
         return {"state": "UNAVAILABLE", "detail": "no live space listing; drift not computed on partial evidence"}
-    declared = set(MANIFEST.get("live_lattice", [])) and {s["name"] for s in MANIFEST["live_lattice"]}
+    declared = {s["name"] for s in MANIFEST["live_lattice"]}
     expected_gone = {c["absorbed"] for c in MANIFEST.get("consolidation_log", [])}
     missing = sorted(declared - live_spaces)
     added = sorted(live_spaces - declared)
@@ -386,6 +609,21 @@ def kernel_line():
         return {"state": "MEASURED", "kernels": rows, "org_models_total": len(models),
                 "label": "MEASURED - live from huggingface.co/api"}
     return _cached("kernels", _go)
+
+def khipu_line():
+    def _go():
+        try:
+            models = _fetch_json("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
+        except Exception as e:
+            return {"state": "UNAVAILABLE", "detail": str(e)[:100]}
+        rows = [{"model": m.get("id", "").split("/")[-1], "downloads": m.get("downloads", 0),
+                 "likes": m.get("likes", 0), "task": m.get("pipeline_tag") or "-"}
+                for m in models if "khipu" in m.get("id", "").lower()]
+        rows.sort(key=lambda r: -r["downloads"])
+        return {"state": "MEASURED", "family": "khipu", "members": rows,
+                "total_downloads": sum(r["downloads"] for r in rows),
+                "label": "MEASURED - live from the Hub API, khipu-labeled only"}
+    return _cached("khipu-line", _go)
 
 def second_brain():
     targets = ["szl-second-brain-inrepo", "szl-lake", "killinchu-osint-corpus", "a11oy-verifiable-corpus", "szl-estate-graph"]
@@ -480,8 +718,9 @@ def trust_path(a, b):
 CSS = """
 body,.gradio-container{background:#070b12!important;color:#e6edfb!important}
 .gradio-container{max-width:1080px!important}
-.wire{background:rgba(255,255,255,.028);border:1px solid rgba(140,170,220,.14);border-radius:14px;padding:16px 18px;margin:10px 0;font-size:13px;color:#9fb0cf}
-.wire h4{margin:0 0 10px;color:#e6edfb;font-size:13.5px}
+.wire{background:rgba(255,255,255,.028);border:1px solid rgba(140,170,220,.14);border-radius:14px;padding:16px 18px;margin:10px 0;font-size:13px;color:#9fb0cf;border-left:3px solid var(--accent,#3af4c8)}
+.wire h4{margin:0 0 10px;font-size:13.5px;color:var(--accent,#e6edfb)}
+.wire .motif{font:600 10.5px ui-monospace,monospace;color:var(--accent,#6b7a99);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
 .wire .row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .wire .tag{font:600 10.5px ui-monospace,monospace;color:#5b8dee;background:rgba(91,141,238,.09);border:1px solid rgba(91,141,238,.25);border-radius:6px;padding:3px 8px;text-decoration:none}
 .wire .tag.k{color:#3af4c8;background:rgba(58,244,200,.08);border-color:rgba(58,244,200,.28)}
@@ -493,9 +732,12 @@ body,.gradio-container{background:#070b12!important;color:#e6edfb!important}
 """
 
 def wire_html(v):
+    accent = v.get("accent", "#3af4c8")
+    motif = v.get("motif", "")
     def tags(items, cls, base):
         return "".join(f'<a class="tag {cls}" href="{base}{i}" target="_blank" rel="noopener">{i}</a>' for i in items)
-    return f"""<div class="wire"><h4>{v['name']} &middot; <span style="color:#6b7a99">{v['domain']}</span></h4>
+    return f"""<div class="wire" style="--accent:{accent}"><h4>{v['name']} &middot; <span style="color:#6b7a99">{v['domain']}</span></h4>
+{f'<div class="motif">{motif}</div>' if motif else ''}
 <div style="font-size:12.5px;margin-bottom:12px;line-height:1.6">{v['tagline']}</div>
 <div class="row"><span class="lbl">repos</span>{tags(v['repos'],'','https://github.com/')}</div>
 <div class="row"><span class="lbl">spaces</span>{tags(v['spaces'],'','https://huggingface.co/spaces/')}</div>
@@ -504,17 +746,61 @@ def wire_html(v):
 <div class="row"><span class="lbl">datasets</span>{tags(v['datasets'],'d','https://huggingface.co/datasets/SZLHOLDINGS/') if v['datasets'] else '<span class="tag d">none declared</span>'}</div>
 <div style="color:#6b7a99;font-size:11px;margin-top:6px">{v['widget_note']}</div></div>"""
 
+def family_html(f):
+    accent = f.get("accent", "#d4a444")
+    members = "".join(f'<span class="tag m">{m}</span>' for m in f["members"])
+    linked = "".join(f'<span class="tag k">{m}</span>' for m in f.get("linked", []))
+    return f"""<div class="wire" style="--accent:{accent}"><h4>{f['name']} &middot; <span style="color:#6b7a99">{f['family']}</span></h4>
+{f'<div class="motif">' + f.get('motif','') + '</div>' if f.get('motif') else ''}
+<div class="row"><span class="lbl">members</span>{members}</div>
+{f'<div class="row"><span class="lbl">linked</span>' + linked + '</div>' if linked else ''}
+<div style="color:#6b7a99;font-size:11px;margin-top:6px">{f['note']}</div></div>"""
+
 def build_consoles():
     import gradio as gr
-    with gr.Blocks(css=CSS, title="SZL Constellation - Consoles") as demo:
+    with gr.Blocks(title="SZL Constellation - Consoles") as demo:
         gr.HTML("""<div class="backbar"><a href="/">&larr; back to the constellation</a> &middot;
-        <a href="/api/constellation/manifest" target="_blank">api</a> &middot;
-        <a href="/api/estates" target="_blank">live estate measure</a></div>
+        <a href="/c2" target="_blank">C2 operating picture</a> &middot;
+        <a href="/api/constellation/manifest" target="_blank">api</a></div>
         <h2 style="margin:0 0 4px">Vertical <span style="color:#3af4c8">Consoles</span></h2>
-        <div style="color:#6b7a99;font-size:12.5px;margin-bottom:10px">Every console probes live at request time and reports UNAVAILABLE rather than fabricate.</div>""")
+        <div style="color:#6b7a99;font-size:12.5px;margin-bottom:10px">Every console probes live at request time and reports UNAVAILABLE rather than fabricate. Each vertical wears its own identity per the design system.</div>""")
         with gr.Tabs():
+            with gr.Tab("SZL Foundry"):
+                f = FAMILIES.get("szl-foundry")
+                if f: gr.HTML(family_html(f))
+                fd = gr.JSON(label="family drift - the workbench checks itself")
+                gr.Button("Measure family drift", variant="primary").click(estate_drift, None, fd)
+                fk = gr.JSON(label="kernel line (live)")
+                gr.Button("Measure the kernel line").click(kernel_line, None, fk)
+            with gr.Tab("KHIPU"):
+                f = FAMILIES.get("khipu")
+                if f: gr.HTML(family_html(f))
+                kl = gr.JSON(label="the khipu dynasty, measured live")
+                gr.Button("Measure the dynasty", variant="primary").click(khipu_line, None, kl)
+                kc = gr.Textbox(lines=5, label="Khipu council corpus",
+                                value="khipu kernels knot the run and hash the proof\nayllu convenes the council of eleven seats\nthe gguf runs byte-verified in ci now\nlambda stays conjecture one advisory\nreceipts make every claim checkable")
+                kq = gr.Textbox(label="Ask the dynasty", value="receipts proof kernels")
+                kout = gr.JSON(label="ranking")
+                gr.Button("Convene with ayllu").click(bm25_rank, [kc, kq], kout)
+            with gr.Tab("Ouroboros Loop"):
+                f = FAMILIES.get("ouroboros-loop")
+                if f: gr.HTML(family_html(f))
+                oi = gr.Slider(1, 500, 50, step=1, label="Iterations")
+                ot = gr.Slider(0.0, 0.5, 0.02, label="Loop tax")
+                oout = gr.JSON(label="loop-tax ledger")
+                gr.Button("Run the loop", variant="primary").click(ouroboros, [oi, ot], oout)
+                ls1 = gr.Slider(0, 1, 0.9, label="evidence")
+                ls2 = gr.Slider(0, 1, 0.95, label="provenance")
+                ls3 = gr.Slider(0, 1, 0.99, label="receipts")
+                lout = gr.JSON(label="lambda gate")
+                gr.Button("Compute Lambda").click(
+                    lambda a, b, c: lambda_gate([a, b, c], [1, 2, 1]), [ls1, ls2, ls3], lout)
+                qb2 = gr.Slider(2, 16, 4, step=1, label="Quant bit-width")
+                qout2 = gr.JSON(label="quant curve")
+                gr.Button("Measure").click(quant_curve, qb2, qout2)
             with gr.Tab("Sentra Assurance"):
-                gr.HTML("""<div class="wire"><h4>Sentra &middot; <span style="color:#6b7a99">Assurance Command</span></h4>
+                gr.HTML("""<div class="wire" style="--accent:#8a6bff"><h4>Sentra &middot; <span style="color:#6b7a99">Assurance Command</span></h4>
+<div class="motif">the gate iris</div>
 <div style="font-size:12.5px;line-height:1.6">Proxied to the flagship. GATE is advisory and deny-by-default; YAWAR recomputes chains link by link.
 Until the v5 deploy lands, this console reports UNAVAILABLE - it never computes verdicts in the flagship's place.</div></div>""")
                 gp = gr.JSON(label="plane registry (live)")
@@ -528,9 +814,6 @@ Until the v5 deploy lands, this console reports UNAVAILABLE - it never computes 
                 yout = gr.JSON(label="flagship YAWAR verification")
                 gr.Button("Verify at the flagship").click(sentra_yawar_proxy, yc, yout)
             with gr.Tab("Receipt Curve"):
-                gr.HTML("""<div class="wire"><h4>Receipt Curve &middot; <span style="color:#6b7a99">see the chain</span></h4>
-<div style="font-size:12.5px;line-height:1.6">A receipt chain rendered as a Hilbert curve. Every receipt is a node; valid links keep the curve teal;
-a broken or tampered link turns the curve red at the exact fault. Mapping proven bijective and continuous.</div></div>""")
                 rc = gr.Textbox(lines=7, label="Receipt chain (JSON array)",
                                 placeholder='[{"seq":0,"prev_hash":"000...","chain_hash":"..."}, ...]')
                 rsvg = gr.HTML(label="the curve")
@@ -577,9 +860,6 @@ a broken or tampered link turns the curve red at the exact fault. Mapping proven
                         qout = gr.JSON(label="quality at width")
                         gr.Button("Measure the frontier").click(quant_curve, qb, qout)
             with gr.Tab("Drift"):
-                gr.HTML("""<div class="wire"><h4>Estate Drift &middot; <span style="color:#6b7a99">the map checks itself</span></h4>
-<div style="font-size:12.5px;line-height:1.6">The receipted lattice vs the org measured live. Decommissions from the consolidation log are EXPECTED;
-anything else is named and owed an explanation. This is the loop: the estate never stops checking its own map.</div></div>""")
                 dout = gr.JSON(label="drift report")
                 gr.Button("Compute drift", variant="primary").click(estate_drift, None, dout)
             with gr.Tab("Kernel Console"):
@@ -611,32 +891,76 @@ anything else is named and owed an explanation. This is the loop: the estate nev
             with gr.Tab("Engines"):
                 out6 = gr.JSON(label="engines on this host")
                 gr.Button("Probe endpoints", variant="primary").click(engine_status, None, out6)
+            with gr.Tab("Crosscheck"):
+                chain_a = gr.Textbox(lines=10, label="Receipt chain A (JSON)")
+                chain_b = gr.Textbox(lines=10, label="Receipt chain B (JSON)")
+                rel_tol = gr.Slider(0.0, 1.0, value=0.01, step=0.001,
+                                    label="Relative tolerance")
+                crosscheck_out = gr.JSON(label="cross-implementation verdict")
+                gr.Button("Crosscheck chains", variant="primary").click(
+                    crosscheck_chains, [chain_a, chain_b, rel_tol], crosscheck_out)
     return demo
 
 # ---------- FastAPI root app ----------
 
 def create_app():
     import gradio as gr
-    from fastapi import FastAPI
-    from fastapi.responses import FileResponse, JSONResponse
-    from fastapi.staticfiles import StaticFiles
+    from fastapi import FastAPI, Request
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
     app = FastAPI(title="SZL Constellation")
 
+    # Only public manifests are assets; never expose the repository root.
+    @app.get("/static/estates.json", include_in_schema=False)
+    def static_estates():
+        return FileResponse(os.path.join(HERE, "estates.json"), media_type="application/json")
+
+    @app.get("/static/verticals.json", include_in_schema=False)
+    def static_verticals():
+        return FileResponse(os.path.join(HERE, "verticals.json"), media_type="application/json")
+
     @app.get("/", include_in_schema=False)
     def root():
-        holo_path = os.path.join(HERE, "holo", "index.html")
-        if os.path.exists(holo_path):
-            return FileResponse(holo_path)
-        return JSONResponse({"state": "UNAVAILABLE",
-                             "detail": "holo/index.html missing on this host - nothing fabricated",
-                             "receipt": _receipt({"root": "holo-missing"})})
+        return FileResponse(os.path.join(HERE, "holo", "index.html"))
+
+    @app.get("/c2", include_in_schema=False)
+    def c2():
+        return FileResponse(os.path.join(HERE, "c2", "index.html"))
+
+    @app.get("/healthz")
+    def healthz():
+        return {
+            "ok": True,
+            "status": "ok",
+            "service": "szl-constellation",
+            "app_sha256": _local_app_sha256(),
+        }
+
+    @app.get("/api/source")
+    def api_source():
+        return source_binding()
+
+    @app.get("/api/build-info")
+    def api_build_info():
+        return {"schema": "szl.build-info/v1", **source_binding()}
+
+    @app.get("/api/c2/scenario")
+    def api_c2_scenario(seed: int = 7, n: int = 28):
+        return c2_scenario(seed, n)
+
+    class C2Verify(BaseModel):
+        events: list
+
+    @app.post("/api/c2/verify")
+    def api_c2_verify(req: C2Verify):
+        return c2_verify(req.events)
 
     @app.get("/api/constellation/manifest")
     def api_manifest():
         payload = {"estates": MANIFEST["estates"], "live_lattice": MANIFEST["live_lattice"],
                    "hubs": MANIFEST["hubs"], "kernel_line": MANIFEST["kernel_line"],
-                   "verticals": [v["id"] for v in VERTICALS["verticals"]]}
+                   "verticals": [v["id"] for v in VERTICALS["verticals"]],
+                   "family_flagships": [f["id"] for f in VERTICALS.get("family_flagships", [])]}
         return {"state": "DECLARED", "manifest": payload, "receipt": _receipt(payload)}
 
     @app.get("/api/constellation/paths")
@@ -664,6 +988,15 @@ def create_app():
     def api_receipt_curve(chain: str = "[]"):
         return receipt_curve(chain)
 
+    @app.get("/api/families")
+    def api_families():
+        return {"state": "DECLARED", "families": VERTICALS.get("family_flagships", []),
+                "receipt": _receipt(VERTICALS.get("family_flagships", []))}
+
+    @app.get("/api/families/khipu/line")
+    def api_khipu():
+        return khipu_line()
+
     @app.get("/api/verticals")
     def api_verticals():
         payload = {"verticals": VERTICALS["verticals"], "shared_substrate": VERTICALS["shared_substrate"]}
@@ -677,33 +1010,81 @@ def create_app():
     def api_kernels():
         return kernel_line()
 
-    app.mount("/static", StaticFiles(directory=HERE), name="static")
+    @app.post("/api/crosscheck")
+    async def api_crosscheck(request: Request):
+        declared = request.headers.get("content-length")
+        try:
+            if declared is not None:
+                declared_bytes = int(declared)
+                if declared_bytes < 0:
+                    return JSONResponse({"state": "BLOCKED", "error": "INVALID_CONTENT_LENGTH"}, status_code=400)
+                if declared_bytes > MAX_CROSSCHECK_REQUEST_BYTES:
+                    return JSONResponse(
+                        {"state": "BLOCKED", "error": "REQUEST_TOO_LARGE", "max_bytes": MAX_CROSSCHECK_REQUEST_BYTES},
+                        status_code=413,
+                    )
+        except ValueError:
+            return JSONResponse({"state": "BLOCKED", "error": "INVALID_CONTENT_LENGTH"}, status_code=400)
+        raw = bytearray()
+        async for chunk in request.stream():
+            if len(raw) + len(chunk) > MAX_CROSSCHECK_REQUEST_BYTES:
+                return JSONResponse(
+                    {"state": "BLOCKED", "error": "REQUEST_TOO_LARGE", "max_bytes": MAX_CROSSCHECK_REQUEST_BYTES},
+                    status_code=413,
+                )
+            raw.extend(chunk)
+        try:
+            decoded = _strict_json_loads(raw)
+            payload = CrosscheckRequest.model_validate(decoded)
+        except (UnicodeDecodeError, ValueError, TypeError, ValidationError, RecursionError):
+            return JSONResponse({"state": "BLOCKED", "error": "INVALID_REQUEST"}, status_code=422)
+        verdict = crosscheck_chains(_canon(payload.a), _canon(payload.b), payload.rel_tol)
+        return {**verdict, "receipt": _receipt(verdict)}
 
-    # v4.7: fail-closed console mount. v4.6's docstring promised this; the code
-    # mounted bare. Any Gradio-version incompatibility now degrades honestly:
-    # the map and every API route above stay live, /panels reports the failure.
-    panels_failure = None
+    panels_error = None
     try:
         demo = build_consoles()
-        app = gr.mount_gradio_app(app, demo, path="/panels")
-    except Exception as e:
-        import traceback
-        panels_failure = {"state": "UNAVAILABLE",
-                          "detail": f"{type(e).__name__}: {str(e)[:300]}",
-                          "traceback_tail": traceback.format_exc().strip().splitlines()[-3:],
-                          "note": "console mount failed at boot; the map and every API route remain live"}
+        # HF enables SSR by default. A mounted sub-app must not compete with
+        # the root Uvicorn process for port 7860.
+        app = gr.mount_gradio_app(app, demo, path="/panels", css=CSS, ssr_mode=False)
+    except Exception as exc:
+        panels_error = type(exc).__name__
 
-    if panels_failure is not None:
         @app.get("/panels", include_in_schema=False)
-        def panels_fallback():
-            return JSONResponse({**panels_failure, "receipt": _receipt(panels_failure)})
+        @app.get("/panels/", include_in_schema=False)
+        def panels_unavailable():
+            return HTMLResponse(
+                '<!doctype html><html lang="en"><meta charset="utf-8">'
+                '<title>Constellation consoles unavailable</title>'
+                '<body style="background:#070b12;color:#d4a444;font:16px monospace;padding:3rem">'
+                '<h1>CONSOLES UNAVAILABLE</h1><p>The console plane failed to mount ('
+                + panels_error + '). No mounted status is claimed.</p>'
+                '<p><a href="/">Constellation map</a> · '
+                '<a href="/api/panels/status">Status evidence</a></p></body></html>',
+                status_code=503,
+            )
 
     @app.get("/api/panels/status")
     def api_panels_status():
-        if panels_failure is not None:
-            return {**panels_failure, "receipt": _receipt(panels_failure)}
-        return {"state": "MEASURED", "console": "mounted at /panels",
-                "receipt": _receipt({"console": "mounted"})}
+        if panels_error is None:
+            return {"state": "MEASURED", "panels": "MOUNTED", "mount": "/panels"}
+        return {"state": "UNAVAILABLE", "panels": "MOUNT_FAILED", "detail": panels_error}
+
+    @app.get("/readyz")
+    def readyz():
+        binding = source_binding()
+        listener = listener_source_contract()
+        checks = {
+            "manifests_loaded": bool(MANIFEST.get("estates")) and bool(VERTICALS.get("verticals")),
+            "panels_mounted": panels_error is None,
+            "source_revision_measured": binding["state"] == "MEASURED",
+            "single_listener_source_contract_validated": listener["valid"],
+        }
+        ready = all(checks.values())
+        return JSONResponse(
+            {"ready": ready, "state": "MEASURED" if ready else "UNAVAILABLE", "checks": checks, "source": binding, "listener_contract": listener},
+            status_code=200 if ready else 503,
+        )
 
     return app
 

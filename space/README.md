@@ -1,13 +1,42 @@
-# Space source mirror
+---
+title: SZL Constellation
+emoji: 🌌
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: 6.26.0
+python_version: '3.13'
+app_file: app.py
+pinned: true
+tags:
+  - szl
+  - governed-ai
+  - receipts
+  - holographic
+  - constellation
+---
 
-Canonical runtime source for HF Space SZLHOLDINGS/szl-constellation.
+# 🌌 SZL Constellation — the living archive
 
-- `app.py` — the backend (v4.5): FastAPI root serving the hologram, Gradio consoles
-  at /panels, receipted JSON API (manifest, paths, estates, drift, kernels,
-  kernel console, sentra planes proxy, receipt curve).
-- `holo/index.html` — the front door (v6.1): three.js + UnrealBloom, territories,
-  living orbits, trust paths, camera fly-to, kernel rain, honest truth states.
+**49 estates, unarchived as light.** This Space turns the SZL Holdings consolidation
+receipt (run `33824259800`, 2026-09-04) into a holographic, WebGL star map:
+every orb is a real estate, every thread a synapse wired into the trinity —
+**Anatomy** (the 3D organ substrate), the **Second Brain** (the evidence-bound
+memory plane), and the **Ouroboros loop** (bounded loop-tax recursion that
+never stops firing).
 
-Mirrored from the Space on 2026-09-04 (Space commits b975f47c + 684cf228).
-The Space is canonical at runtime; this directory is the org's reviewable copy.
-SYNC.md from the bootstrap is superseded by this directory.
+## How to read it
+
+- **Reachable** (bright teal) — the estate answered a live ping from *your* browser, computed at view time
+- **Declared** (blue) — a manifest fact from the consolidation receipt
+- **Unmeasured** (dim) — no live endpoint answered; reported, never faked
+
+## What computes here
+
+Eight panels with real math, no fabricated backends: Second Brain (live Hub
+dataset telemetry), Kernel Line (the org's kernels measured from the Hub API),
+Λ Gate (advisory aggregation), Ouroboros (loop-tax ledger), Receipt Verifier
+(hash-chain recomputation), BM25 retrieval, Quant Curve, and an honest Engine
+Status that reports BLOCKED when no endpoint is configured.
+
+*Doctrine v11 — nothing glows that didn't earn it.*
