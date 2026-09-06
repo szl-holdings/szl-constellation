@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: constellation-protected-main-publisher
@@ -28,7 +29,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
       GITHUB_TOKEN: ${{ github.token }}
       HF_HUB_DISABLE_TELEMETRY: "1"
       GRADIO_ANALYTICS_ENABLED: "False"
@@ -86,14 +86,56 @@ jobs:
           git diff --check
           test -z "$(git status --porcelain)"
 
-      - name: Publish exact source and verify immutable/live readback
-        run: python tools/run_publish_constellation.py
+      - name: Check out the immutable organization credential selector
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: szl-holdings/.github
+          ref: bedcd3c77b5cf745dcc1490ac503e30397633227
+          path: .shared-github
+          fetch-depth: 1
+          persist-credentials: false
 
-      - name: Retain the deployment receipt
+      - name: Acquire and actively validate one Space publisher credential
+        env:
+          HF_ORG_TOKEN_CANDIDATE: ${{ secrets.HF_ORG_TOKEN }}
+          HF_ORG_TOKEN1_CANDIDATE: ${{ secrets.HF_ORG_TOKEN1 }}
+          HF_WRITE_TOKEN_CANDIDATE: ${{ secrets.HF_WRITE_TOKEN }}
+          HF_TOKEN_CANDIDATE: ${{ secrets.HF_TOKEN }}
+          HUGGINGFACE_TOKEN_CANDIDATE: ${{ secrets.HUGGINGFACE_TOKEN }}
+          HUGGING_FACE_HUB_TOKEN_CANDIDATE: ${{ secrets.HUGGING_FACE_HUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python .shared-github/.github/scripts/acquire_hf_publisher_token.py \
+            --target-repo SZLHOLDINGS/szl-constellation \
+            --target-type space \
+            --oidc-resource spaces/SZLHOLDINGS/szl-constellation \
+            --token-file "${RUNNER_TEMP}/constellation-hf-token" \
+            --report artifacts/constellation-publisher-credential.json
+
+      - name: Publish exact source and verify immutable/live readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          token_file="${RUNNER_TEMP}/constellation-hf-token"
+          test -s "$token_file"
+          trap 'rm -f -- "$token_file"' EXIT
+          HF_TOKEN="$(tr -d '\r\n' < "$token_file")" \
+            python tools/run_publish_constellation.py
+
+      - name: Remove the ephemeral publisher credential
+        if: always()
+        shell: bash
+        run: rm -f -- "${RUNNER_TEMP}/constellation-hf-token"
+
+      - name: Retain bounded deployment and credential-selection receipts
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: constellation-deployment-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/constellation-deployment-receipt.json
+          path: |
+            artifacts/constellation-deployment-receipt.json
+            artifacts/constellation-publisher-credential.json
           if-no-files-found: warn
           retention-days: 30
