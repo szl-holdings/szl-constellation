@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#050814">
+  <title>SZL Constellation — Archive Revival Lineage</title>
+  <meta name="description" content="A source-bound map of restored owners, consolidated repositories, and immutable historical evidence.">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#lineage">Skip to lineage registry</a>
+  <div class="starfield" aria-hidden="true"></div>
+  <header class="shell masthead">
+    <div>
+      <p class="eyebrow">SZL HOLDINGS / ESTATE INTELLIGENCE</p>
+      <h1>Archive Revival<br><span>Constellation</span></h1>
+      <p class="lede">Four source owners restored. Twenty-four capabilities consolidated. Six historical records preserved. One public map that does not erase provenance.</p>
+    </div>
+    <div class="source-chip" aria-live="polite">
+      <span class="source-pulse" aria-hidden="true"></span>
+      <span id="source-state">Reading source identity…</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="doctrine" aria-labelledby="doctrine-title">
+      <p class="section-label">PORTFOLIO DOCTRINE</p>
+      <div>
+        <h2 id="doctrine-title">Revive capability.<br>Retire duplication.</h2>
+        <p>A repository remains independent only when it still owns a unique maintained capability. Reusable work moves through review into a canonical successor. Historical evidence remains immutable. Constellation shows the lineage; it does not become the code owner.</p>
+      </div>
+    </section>
+
+    <section class="metrics" aria-label="Archive revival classification counts">
+      <button type="button" data-disposition="SOURCE_OWNER" aria-pressed="false"><strong id="source-count">4</strong><span>source owners</span></button>
+      <button type="button" data-disposition="CONSOLIDATE" aria-pressed="false"><strong id="consolidate-count">24</strong><span>consolidations</span></button>
+      <button type="button" data-disposition="HISTORICAL" aria-pressed="false"><strong id="historical-count">6</strong><span>historical records</span></button>
+      <button type="button" data-disposition="" aria-pressed="true"><strong id="total-count">34</strong><span>classified repositories</span></button>
+    </section>
+
+    <section class="controls" aria-label="Lineage filters">
+      <label>
+        <span>Search the lineage</span>
+        <input id="search" type="search" maxlength="64" autocomplete="off" placeholder="Repository, successor, capability…">
+      </label>
+      <label>
+        <span>Canonical successor</span>
+        <select id="successor-filter">
+          <option value="">All successors</option>
+        </select>
+      </label>
+      <button type="button" id="clear-filters">Clear filters</button>
+    </section>
+
+    <section class="lineage-visual" aria-labelledby="visual-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-label">LINEAGE FIELD</p>
+          <h2 id="visual-title">Source ownership after consolidation</h2>
+        </div>
+        <p>Lines indicate declared successor relationships. They do not claim code transfer, Hub publication, or runtime readiness.</p>
+      </div>
+      <div id="successor-field" class="successor-field" role="list" aria-label="Successor relationship groups"></div>
+    </section>
+
+    <section id="lineage" class="registry" aria-labelledby="registry-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-label">GOVERNED REGISTRY</p>
+          <h2 id="registry-title">Every classified source</h2>
+        </div>
+        <p id="result-summary" aria-live="polite">Loading archive contract…</p>
+      </div>
+      <div id="registry-grid" class="registry-grid"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <h3>No lineage match</h3>
+        <p>Clear a filter or search by a broader repository, successor, or capability term.</p>
+      </div>
+    </section>
+
+    <section class="state-ladder" aria-labelledby="state-title">
+      <p class="section-label">TRUTH BOUNDARY</p>
+      <h2 id="state-title">Progress cannot be collapsed.</h2>
+      <ol id="truth-boundary"></ol>
+      <p>Each transition requires its own evidence and receipt. A classification is not a provider mutation. A source merge is not a Hub publication. A running Space is not source-matched until exact readback succeeds.</p>
+    </section>
+
+    <dialog id="repository-dialog" aria-labelledby="dialog-title">
+      <form method="dialog" class="dialog-frame">
+        <button class="dialog-close" value="close" aria-label="Close repository detail">×</button>
+        <p id="dialog-disposition" class="section-label">REPOSITORY</p>
+        <h2 id="dialog-title">Repository</h2>
+        <p id="dialog-capability"></p>
+        <dl id="dialog-evidence"></dl>
+        <div class="dialog-actions">
+          <a id="dialog-source" href="#" rel="noreferrer" class="primary-action">Open source record</a>
+          <button id="readback-button" type="button" class="secondary-action">Read local evidence</button>
+        </div>
+        <pre id="readback-result" tabindex="0" hidden></pre>
+      </form>
+    </dialog>
+  </main>
+
+  <footer class="shell footer">
+    <p>Classification authority: <code>szl-holdings/.github/governance/archive-portfolio-v2.json</code></p>
+    <p>Provider state remains unavailable until independently measured.</p>
+  </footer>
+  <noscript><p class="noscript">JavaScript is required for the interactive map. The read-only registry remains available at <code>/api/archive-revival</code>.</p></noscript>
+</body>
+</html>

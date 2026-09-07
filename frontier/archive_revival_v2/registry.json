@@ -1,0 +1,366 @@
+{
+  "schema": "szl.archive-revival-registry/v2",
+  "contract": {
+    "repository": "szl-holdings/.github",
+    "path": "governance/archive-portfolio-v2.json",
+    "merge_sha": "79a8f2add42913b0831260574145437efe56af4a",
+    "authority": "source lifecycle classification only"
+  },
+  "truth_boundary": [
+    "CLASSIFIED",
+    "UNARCHIVED",
+    "SOURCE_PR",
+    "MERGED",
+    "HUB_PUBLISHED",
+    "RUNTIME_READY",
+    "EXACT_READBACK_VERIFIED"
+  ],
+  "counts": {
+    "source_owner": 4,
+    "consolidate": 24,
+    "historical": 6,
+    "total": 34
+  },
+  "repositories": [
+    {
+      "name": "szl-atelier",
+      "disposition": "SOURCE_OWNER",
+      "successor": "szl-atelier",
+      "capability": "Governed model, dataset, Space, delivery, and research artifact explorer",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": false,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-mesh",
+      "disposition": "SOURCE_OWNER",
+      "successor": "szl-mesh",
+      "capability": "DDIL and CRDT coordination source authority",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": false,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-router",
+      "disposition": "SOURCE_OWNER",
+      "successor": "szl-router",
+      "capability": "Sovereign-first OpenAI-compatible gateway with bounded failover and receipts",
+      "showcase": ["SZLHOLDINGS/a11oy", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": false,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "uds-bundles",
+      "disposition": "SOURCE_OWNER",
+      "successor": "uds-bundles",
+      "capability": "UDS and Zarf air-gap bundle source, SBOM, and provenance authority",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": false,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "cosmos",
+      "disposition": "CONSOLIDATE",
+      "successor": "anatomy",
+      "capability": "Living anatomy and spatial systems material",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "counsel",
+      "disposition": "CONSOLIDATE",
+      "successor": "a11oy:verticals/counsel",
+      "capability": "Legal matter command and governed deadline primitives",
+      "showcase": ["SZLHOLDINGS/a11oy", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "developers",
+      "disposition": "CONSOLIDATE",
+      "successor": "a11oy-net",
+      "capability": "Developer documentation and integration material",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "docs-site",
+      "disposition": "CONSOLIDATE",
+      "successor": "a11oy-net",
+      "capability": "Public documentation surface",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "energy-attest-holo",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-energy-attest",
+      "capability": "Energy provenance visualization",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "governed-inference-meter",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-energy-attest",
+      "capability": "Inference energy and evidence metering research",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "governed-norm-holo",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-lambda-gate",
+      "capability": "Governed normalization visualization",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "lambda-gate-holo",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-lambda-gate",
+      "capability": "Lambda gate visual demonstration",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-governed-norm",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-lambda-gate",
+      "capability": "Governed normalization source material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "immune-lattice",
+      "disposition": "CONSOLIDATE",
+      "successor": "immune",
+      "capability": "Immune lattice and resilient-systems material",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "khipu-lab",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-khipu",
+      "capability": "KHIPU model experiments and lab evidence",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "khipu-pages",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-khipu",
+      "capability": "KHIPU public presentation material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "lean-kernel",
+      "disposition": "CONSOLIDATE",
+      "successor": "lutar-lean",
+      "capability": "Lean proof kernel source material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-formula-ledger",
+      "disposition": "CONSOLIDATE",
+      "successor": "lutar-lean",
+      "capability": "Formula ledger and proof lineage",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "ouroboros",
+      "disposition": "CONSOLIDATE",
+      "successor": "platform",
+      "capability": "Ouroboros thesis implementation and research artifacts",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "receipt-chain-live",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-receipt",
+      "capability": "Receipt-chain live demonstration material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-build-env",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-forge",
+      "capability": "Reproducible build-environment material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-cookbook",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-forge",
+      "capability": "Developer recipes and governed deployment examples",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-experiments",
+      "disposition": "CONSOLIDATE",
+      "successor": "a11oy",
+      "capability": "Experimental governed-agent material",
+      "showcase": ["SZLHOLDINGS/a11oy", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-organ-integrity",
+      "disposition": "CONSOLIDATE",
+      "successor": "a11oy",
+      "capability": "Organ integrity and fail-closed governance material",
+      "showcase": ["SZLHOLDINGS/a11oy", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-kernels-live",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-kernels",
+      "capability": "Live governed-kernel presentation material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-telemetry",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-substrate",
+      "capability": "Telemetry and observability substrate material",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "vsp-otel",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-substrate",
+      "capability": "OpenTelemetry and vertical service-plane material",
+      "showcase": ["SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-provctl-live",
+      "disposition": "CONSOLIDATE",
+      "successor": "szl-provctl",
+      "capability": "Provenance-control live presentation material",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": false,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "evidence-typed-formula-governance",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Immutable formula-governance research record",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "fail-closed-governed-ai-services",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Immutable fail-closed governed-services research record",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-fleet-overlay",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Immutable fleet-overlay demonstration record",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-otel-mesh",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Frozen OpenTelemetry mesh research record superseded by active mesh source",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "szl-uds-deployment",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Immutable deployment-evidence record distinct from active bundle source",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    },
+    {
+      "name": "warhacker-demo",
+      "disposition": "HISTORICAL",
+      "successor": null,
+      "capability": "Immutable WarHacker demonstration record",
+      "showcase": ["SZLHOLDINGS/szl-atelier", "SZLHOLDINGS/szl-constellation"],
+      "expected_archived": true,
+      "immutable_history": true,
+      "provider_state": "UNAVAILABLE_NOT_MEASURED"
+    }
+  ]
+}
