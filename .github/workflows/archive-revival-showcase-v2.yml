@@ -1,0 +1,175 @@
+name: Archive revival showcase v2 qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "frontier/archive_revival_v2/**"
+      - ".github/workflows/archive-revival-showcase-v2.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontier/archive_revival_v2/**"
+      - ".github/workflows/archive-revival-showcase-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: archive-revival-showcase-v2-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  qualify:
+    name: archive-revival-showcase-v2/qualify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout exact candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up exact Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.10"
+          cache: pip
+          cache-dependency-path: frontier/archive_revival_v2/requirements.txt
+
+      - name: Install pinned dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --requirement frontier/archive_revival_v2/requirements.txt
+
+      - name: Prove registry API and receipt contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            frontier/archive_revival_v2/app.py \
+            frontier/archive_revival_v2/registry.py \
+            frontier/archive_revival_v2/tests/test_registry.py
+          python -m pytest -q -p no:cacheprovider frontier/archive_revival_v2/tests
+          find frontier/archive_revival_v2 -type d -name __pycache__ -prune -exec rm -rf {} +
+          find frontier/archive_revival_v2 -type f -name '*.py[co]' -delete
+
+      - name: Verify exact portfolio classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=frontier/archive_revival_v2 python - <<'PY'
+          from registry import load_registry
+          value = load_registry()
+          assert value['counts'] == {
+              'source_owner': 4,
+              'consolidate': 24,
+              'historical': 6,
+              'total': 34,
+          }
+          restored = sorted(
+              row['name']
+              for row in value['repositories']
+              if row['disposition'] == 'SOURCE_OWNER'
+          )
+          assert restored == ['szl-atelier', 'szl-mesh', 'szl-router', 'uds-bundles']
+          assert all(row['provider_state'] == 'UNAVAILABLE_NOT_MEASURED' for row in value['repositories'])
+          print('portfolio classification: PASS')
+          PY
+
+      - name: Prove local-only responsive frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('frontier/archive_revival_v2/static/index.html').read_text()
+          js = Path('frontier/archive_revival_v2/static/app.js').read_text()
+          css = Path('frontier/archive_revival_v2/static/styles.css').read_text()
+          forbidden_html = ('http://', 'https://', '<iframe', 'analytics', 'localStorage', 'sessionStorage')
+          present = [value for value in forbidden_html if value in html]
+          if present:
+              raise SystemExit(f'forbidden HTML dependencies: {present}')
+          required_html = ('viewport-fit=cover', 'skip-link', 'aria-live', '<dialog', '/styles.css', '/app.js')
+          missing = [value for value in required_html if value not in html]
+          if missing:
+              raise SystemExit(f'missing accessibility primitives: {missing}')
+          required_css = (
+              '@media (max-width: 32rem)',
+              '@media (prefers-reduced-motion: reduce)',
+              '@media (prefers-contrast: more)',
+              '@media (forced-colors: active)',
+              '@media (pointer: coarse)',
+              '@media print',
+              ':focus-visible',
+          )
+          missing_css = [value for value in required_css if value not in css]
+          if missing_css:
+              raise SystemExit(f'missing responsive contracts: {missing_css}')
+          for sink in ('innerHTML', 'insertAdjacentHTML', 'document.write'):
+              if sink in js:
+                  raise SystemExit(f'unsafe dynamic sink present: {sink}')
+          if 'fetch(`https://' in js or "fetch('https://" in js or 'fetch("https://' in js:
+              raise SystemExit('external frontend fetch present')
+          print('frontend qualification: PASS')
+          PY
+
+      - name: Verify read-only authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          source = '\n'.join([
+              Path('frontier/archive_revival_v2/app.py').read_text(),
+              Path('frontier/archive_revival_v2/registry.py').read_text(),
+          ])
+          forbidden = (
+              'subprocess.', 'os.system(', 'eval(', 'exec(',
+              '@app.post(', '@app.put(', '@app.patch(', '@app.delete(',
+              'Authorization', 'GH_TOKEN', 'HF_TOKEN', 'urllib.request', 'requests.',
+          )
+          present = [value for value in forbidden if value in source]
+          if present:
+              raise SystemExit(f'forbidden authority present: {present}')
+          required = (
+              'mutation_authority',
+              'repository_admin_authority',
+              'hugging_face_write_authority',
+              'UNAVAILABLE_NOT_PERFORMED',
+              'UNAVAILABLE_NOT_MEASURED',
+          )
+          missing = [value for value in required if value not in source]
+          if missing:
+              raise SystemExit(f'missing authority boundary: {missing}')
+          print('read-only authority: PASS')
+          PY
+
+      - name: Build non-root container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --file frontier/archive_revival_v2/Dockerfile --tag archive-revival-v2:${GITHUB_SHA} .
+          test "$(docker image inspect --format '{{.Config.User}}' archive-revival-v2:${GITHUB_SHA})" = "10003:10003"
+
+      - name: Verify clean candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          find frontier/archive_revival_v2 -type d -name __pycache__ -prune -exec rm -rf {} +
+          find frontier/archive_revival_v2 -type f -name '*.py[co]' -delete
+          rm -rf .pytest_cache
+          git diff --check
+          test -z "$(git status --porcelain)"
