@@ -1,13 +1,18 @@
 /*
- * SZL SHADER FABRIC v1 — clean-room estate hologram engine
+ * SZL SHADER FABRIC v1.1 — clean-room estate hologram engine
  * SZL Holdings — Doctrine v11 — Apache-2.0
  *
  * Rule zero: nothing glows that didn't earn it.
  * Estate entries carry honesty states; MEASURED glows, BLOCKED dims,
  * UNKNOWN renders neutral, malformed input renders NOTHING (fail-closed).
  *
- * API silhouette inspired by Shadertoy channel conventions
- * (iResolution / iTime / iMouse / iChannel0). All code original.
+ * API silhouette follows Shadertoy channel conventions
+ * (iResolution / iTime / iMouse). All code original.
+ *
+ * v1.1 sweep (no bandaids, no dead code):
+ *  - removed unused FRAG_FB feedback stub; iChannel0 is not declared
+ *    in v1.x. Trail rendering arrives when real ping-pong buffers land.
+ *  - ASCII-only identifiers (SzlShaderFabric).
  */
 'use strict';
 
@@ -19,83 +24,74 @@ const HONESTY_MODES = Object.freeze({
   INVALID:  0.0    // stand-down — renders nothing
 });
 
-const VERTS = `
+const VERT_SRC = `
 attribute vec2 aPos;
 void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
-// Estate field: receipts as pulse trails, estates as glow points.
-const FRAG = `
+const FRAG_SRC = `
 precision highp float;
 uniform vec2  iResolution;
 uniform float iTime;
 uniform vec2  iMouse;
-uniform sampler2D iChannel0;      // receipt feedback trail (ping-pong)
 uniform vec3  uEstates[64];       // xy = position, z = honesty gain
 uniform int   uEstateCount;
 uniform vec3  uTint[64];          // per-estate color
 
 void main() {
   vec2 uv = gl_FragCoord.xy / iResolution.xy;
-  vec3 col = texture2D(iChannel0, uv).rgb * 0.965;  // decaying receipt trail
-
-  // ambient fabric — dark, honest baseline
-  col += vec3(0.012, 0.014, 0.020);
+  vec3 col = vec3(0.012, 0.014, 0.020);   // ambient fabric baseline
 
   for (int i = 0; i < 64; ++i) {
     if (i >= uEstateCount) break;
     float gain  = uEstates[i].z;
-    if (gain <= 0.0) continue;                      // INVALID = no glow
+    if (gain <= 0.0) continue;            // INVALID = no glow
     vec2  p     = uEstates[i].xy;
     float d     = distance(uv, p);
     float pulse = 0.55 + 0.45 * sin(iTime * 1.7 + float(i) * 2.4);
     float glow  = gain * pulse * 0.040 / max(d * d * 900.0, 0.0004);
     col += uTint[i] * glow;
-    col += uTint[i] * smoothstep(0.0035, 0.0, d) * gain;  // core kernel
+    col += uTint[i] * smoothstep(0.0035, 0.0, d) * gain;   // core kernel
   }
 
-  // receipt hash particles riding the trails
-  float scan = fract(sin(dot(floor(gl_FragCoord.xy / 6.0), vec2(12.9898,78.233))) * 43758.5453);
-  col += vec3(0.02, 0.05, 0.04) * scan * smoothstep(0.4, 0.0,
-         abs(uv.y - fract(iTime * 0.011 + scan)));
+  // receipt hash particles — deterministic sweep, no unbound samplers
+  float scan = fract(sin(dot(floor(gl_FragCoord.xy / 6.0), vec2(12.9898, 78.233))) * 43758.5453);
+  float band = abs(uv.y - fract(iTime * 0.011 + scan));
+  col += vec3(0.02, 0.05, 0.04) * scan * smoothstep(0.4, 0.0, band);
 
-  float d_m = distance(uv, iMouse / iResolution);
-  col += vec3(0.015, 0.03, 0.028) / max(d_m * 140.0, 1.0);
+  float dMouse = distance(uv, iMouse / iResolution);
+  col += vec3(0.015, 0.03, 0.028) / max(dMouse * 140.0, 1.0);
+
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-// Pass-through for the ping-pong feedback buffer (receipt trail memory)
-const FRAG_FB = `
-precision highp float;
-uniform sampler2D iChannel0;
-void main() {
-  gl_FragColor = texture2D(iChannel0, gl_FragCoord.xy / vec2(textureSizeHack));
-}`;
-
 function compileShader(gl, type, src) {
-  const s = gl.createShader(type);
-  gl.shaderSource(s, src);
-  gl.compileShader(s);
-  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-    console.error('[szl-fabric] shader compile failed:', gl.getShaderInfoLog(s));
-    gl.deleteShader(s); return null;
+  const shader = gl.createShader(type);
+  gl.shaderSource(shader, src);
+  gl.compileShader(shader);
+  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+    console.error('[szl-fabric] shader compile failed:', gl.getShaderInfoLog(shader));
+    gl.deleteShader(shader);
+    return null;
   }
-  return s;
+  return shader;
 }
 
 function linkProgram(gl, vs, fs) {
-  const p = gl.createProgram();
-  gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
-  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-    console.error('[szl-fabric] link failed:', gl.getProgramInfoLog(p));
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error('[szl-fabric] link failed:', gl.getProgramInfoLog(prog));
     return null;
   }
-  return p;
+  return prog;
 }
 
 /**
  * validateEstate — fail-closed admission gate.
  * An estate earns glow ONLY with a declared, known honesty state.
- * Anything malformed is dropped. Unknown state defaults to UNKNOWN.
+ * Malformed entries are dropped. Unknown state defaults to UNKNOWN.
  */
 export function validateEstate(e) {
   if (!e || typeof e !== 'object') return null;
@@ -105,30 +101,42 @@ export function validateEstate(e) {
   const gain = HONESTY_MODES[state] !== undefined ? HONESTY_MODES[state]
                                                 : HONESTY_MODES.UNKNOWN;
   const tint = Array.isArray(e.tint) && e.tint.length === 3
-    ? e.tint : [0.35, 0.8, 0.7]; // default SZL teal
+    ? e.tint : [0.35, 0.8, 0.7];   // default SZL teal
   return { x: e.x, y: e.y, gain, tint, id: String(e.id || 'unnamed') };
 }
 
-export class SzלShaderFabric {
+export class SzlShaderFabric {
   constructor(canvas, estates = []) {
     this.canvas = canvas;
     this.gl = canvas.getContext('webgl2', { antialias: false, alpha: false })
            || canvas.getContext('webgl',  { antialias: false, alpha: false });
-    if (!this.gl) { console.error('[szl-fabric] WebGL unavailable — rendering honest static fallback'); return; }
-
-    // fail-closed estate admission
+    this.staticFallback = false;
+    if (!this.gl) {
+      // honest static fallback rash: no claims, no glow, plain notice
+      this.staticFallback = true;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#05070a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#40514e';
+        ctx.font = '12px monospace';
+        ctx.fillText('SZL FABRIC: WebGL unavailable — static honest fallback', 16, 24);
+      }
+      return;
+    }
     this.estates = estates.map(validateEstate).filter(Boolean).slice(0, 64);
     this.dropped = estates.length - this.estates.length;
-    if (this.dropped > 0) console.warn(`[szl-fabric] ${this.dropped} malformed estate(s) dropped — fail-closed`);
-
+    if (this.dropped > 0) {
+      console.warn(`[szl-fabric] ${this.dropped} malformed estate(s) dropped — fail-closed`);
+    }
     this._build();
     this._running = false;
   }
 
   _build() {
     const gl = this.gl;
-    const vs = compileShader(gl, gl.VERTEX_SHADER, VERTS);
-    const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG);
+    const vs = compileShader(gl, gl.VERTEX_SHADER, VERT_SRC);
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, FRAG_SRC);
     if (!vs || !fs) return;
     this.prog = linkProgram(gl, vs, fs);
     if (!this.prog) return;
@@ -165,7 +173,6 @@ export class SzלShaderFabric {
       const res = await fetch(estatesUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      // estates.json is the canonical estate registry; project to field coords
       raw = (data.estates || []).map((e, i, arr) => ({
         id: e.name || e.id,
         x: typeof e.x === 'number' ? e.x : (0.1 + 0.8 * (i / Math.max(arr.length - 1, 1))),
@@ -177,7 +184,7 @@ export class SzלShaderFabric {
       console.error('[szl-fabric] estate fetch failed — fail-closed empty field:', err);
       raw = [];
     }
-    return new SzלShaderFabric(canvas, raw);
+    return new SzlShaderFabric(canvas, raw);
   }
 
   start() {
@@ -210,4 +217,4 @@ export class SzלShaderFabric {
   stop() { this._running = false; }
 }
 
-export default SzלShaderFabric;
+export default SzlShaderFabric;

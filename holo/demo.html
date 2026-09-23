@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SZL Shader Fabric — Estate Hologram v1</title>
+<title>SZL Shader Fabric — Estate Hologram v1.1</title>
 <meta name="description" content="SZL Constellation holographic estate field. Nothing glows that didn't earn it.">
 <style>
   :root { --bg: #05070a; --teal: #59ccc1; --dim: #40514e; }
@@ -23,24 +23,25 @@
 </style>
 </head>
 <body>
-<canvas id="fabric"></canvas>
+<canvas id="fabric" width="1280" height="800"></canvas>
 <header>SZL Constellation &mdash; Estate Hologram</header>
 <div id="hud">
   estates <b id="count">&mdash;</b><br>
   dropped <b id="dropped">0</b> (fail-closed)<br>
   doctrine <b>v11</b>
 </div>
-<footer>nothinG glowS thaT didn&rsquo;t earN it.</footer>
+<footer>nothing glows that didn&rsquo;t earn it.</footer>
 <script type="module">
-import SzלShaderFabric from './szl-shader-fabric.js';
-
-// Load the canonical estate registry; projection is fail-closed.
+import SzlShaderFabric from './szl-shader-fabric.js';
 const canvas = document.getElementById('fabric');
-const fabric = await SzלShaderFabric.fromEstateJson(canvas, '../estates.json');
-
-document.getElementById('count').textContent = fabric.estates ? fabric.estates.length : 0;
-document.getElementById('dropped').textContent = fabric.dropped || 0;
-fabric.start();
+const fabric = await SzlShaderFabric.fromEstateJson(canvas, '../estates.json');
+if (fabric.staticFallback) {
+  document.getElementById('count').textContent = 'STATIC';
+} else {
+  document.getElementById('count').textContent = fabric.estates.length;
+  document.getElementById('dropped').textContent = fabric.dropped || 0;
+  fabric.start();
+}
 </script>
 </body>
 </html>
