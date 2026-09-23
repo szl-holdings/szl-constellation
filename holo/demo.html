@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SZL Shader Fabric — Estate Hologram v1</title>
+<meta name="description" content="SZL Constellation holographic estate field. Nothing glows that didn't earn it.">
+<style>
+  :root { --bg: #05070a; --teal: #59ccc1; --dim: #40514e; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: var(--bg); overflow: hidden;
+    font-family: ui-monospace, 'Cascadia Code', monospace; }
+  #fabric { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  header { position: fixed; top: 1.25rem; left: 1.5rem; color: var(--teal);
+    font-size: 0.75rem; letter-spacing: 0.35em; text-transform: uppercase;
+    text-shadow: 0 0 12px rgba(89,204,193,0.6); z-index: 2; }
+  footer { position: fixed; bottom: 1.25rem; left: 1.5rem; color: var(--dim);
+    font-size: 0.65rem; letter-spacing: 0.2em; z-index: 2; }
+  #hud { position: fixed; top: 1.25rem; right: 1.5rem; text-align: right;
+    color: var(--dim); font-size: 0.65rem; line-height: 1.9; z-index: 2;
+    letter-spacing: 0.15em; }
+  #hud b { color: var(--teal); font-weight: normal; }
+</style>
+</head>
+<body>
+<canvas id="fabric"></canvas>
+<header>SZL Constellation &mdash; Estate Hologram</header>
+<div id="hud">
+  estates <b id="count">&mdash;</b><br>
+  dropped <b id="dropped">0</b> (fail-closed)<br>
+  doctrine <b>v11</b>
+</div>
+<footer>nothinG glowS thaT didn&rsquo;t earN it.</footer>
+<script type="module">
+import SzלShaderFabric from './szl-shader-fabric.js';
+
+// Load the canonical estate registry; projection is fail-closed.
+const canvas = document.getElementById('fabric');
+const fabric = await SzלShaderFabric.fromEstateJson(canvas, '../estates.json');
+
+document.getElementById('count').textContent = fabric.estates ? fabric.estates.length : 0;
+document.getElementById('dropped').textContent = fabric.dropped || 0;
+fabric.start();
+</script>
+</body>
+</html>
