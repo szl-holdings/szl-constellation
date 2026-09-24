@@ -930,6 +930,24 @@ def create_app():
     def c2():
         return FileResponse(os.path.join(HERE, "c2", "index.html"))
 
+    # Shader Fabric v1.1 runtime routes (additive; public assets only).
+    @app.get("/fabric", include_in_schema=False)
+    def fabric_entry():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/holo/demo.html", status_code=307)
+
+    @app.get("/holo/demo.html", include_in_schema=False)
+    def fabric_demo():
+        return FileResponse(os.path.join(HERE, "holo", "demo.html"), media_type="text/html")
+
+    @app.get("/holo/szl-shader-fabric.js", include_in_schema=False)
+    def fabric_engine():
+        return FileResponse(os.path.join(HERE, "holo", "szl-shader-fabric.js"), media_type="text/javascript")
+
+    @app.get("/estates.json", include_in_schema=False)
+    def fabric_estates():
+        return FileResponse(os.path.join(HERE, "estates.json"), media_type="application/json")
+
     @app.get("/healthz")
     def healthz():
         return {
