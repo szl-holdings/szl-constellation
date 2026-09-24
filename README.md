@@ -1,50 +1,92 @@
-# SZL Constellation — the living archive
+<div align="center">
 
-**49 estates, unarchived as light. 8 verticals, wired end-to-end.**
+# S Z L   C O N S T E L L A T I O N
 
-Source mirror of the Hugging Face Space [`SZLHOLDINGS/szl-constellation`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation).
+**The living archive — 49 estates rendered as light.**
 
-## What it is
+`GLSL` · `WebGL2 + WebGL1` · `fail-closed` · `Apache-2.0` · Doctrine v11
 
-- **`holo/index.html`** — the hologram: a three.js WebGL star map. 49 estate orbs on nine tier shells orbit the trinity — **Second Brain** (teal core), **Anatomy** (violet core), and the **Ouroboros** ring that never stops. Every estate is wired to its hub by a neural thread carrying endless synapse pulses. Kernel rain falls inward into the second brain, forever. Live satellites ring the outside. Orbs brighten to REACHABLE only when they answer a live ping from the viewer's browser.
-- **`app.py`** — the Gradio app + FastAPI backend. Eight per-vertical consoles (Killinchu, PURIQ, Terra, Aegis, Lyte, Counsel, Finance, David Leads), each wired to its audited repos, kernels, models, and datasets, each with a real computing widget (OSINT mesh query, Λ gate, receipt verifier, ouroboros ledger, BM25, quant curve, live probes).
-- **`estates.json`** — the 49-estate manifest (consolidation receipt run 33824259800) + the 16-satellite live lattice + the 12-kernel line.
-- **`verticals.json`** — the wiring map: every vertical bound to its real GitHub repos, HF Spaces, kernels, models, datasets, and live endpoints (audited 2026-09-04: 113 org repos, 44 models, 40 datasets, 17 Spaces).
+[HF Space (runtime)](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation) · [Build receipt (receipted → szl-lake)](https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-23/holo-shader-fabric-v1.json) · [Org](https://github.com/szl-holdings)
 
-## JSON backend
+</div>
 
-| Route | Truth |
-|---|---|
-| `/api/constellation/manifest` | DECLARED manifest, hash-receipted |
-| `/api/verticals` | The wiring map |
-| `/api/verticals/{id}/status` | Live probes — MEASURED or UNAVAILABLE |
-| `/api/kernels` | Kernel line measured from the Hub API at request time |
+---
 
-Every response carries an UNSIGNED_HONEST receipt: a SHA-256 that commits to the
-payload, verifiable by recomputing.
+## What this is
 
-## Doctrine v11
+A holographic, computable map of the whole SZL Holdings estate. Every orb on the field is a real repository, kernel, model, or dataset — and crucially, the renderer is governed by the same doctrine as the rest of the stack: **nothing glows that didn't earn it.**
 
-Nothing glows that didn't earn it. REACHABLE is computed, DECLARED is receipted,
-UNMEASURED is reported — never fabricated. Λ = Conjecture 1 (advisory).
+This repo now carries the **SZL Shader Fabric** (`holo/`), a clean-room GLSL estate hologram engine: estates are admitted through a fail-closed validation gate, and each one renders at a brightness keyed to its declared honesty state. No runtime deployment of the Fabric is claimed by this README — the engine is source-live; the Gradio Space runs the archive panels (Sept 8 image).
 
-## Release log
+## Run the hologram in 20 seconds (dev path)
 
-- **Runtime restoration — 2026-09-05:** Space commit
-  [`f02ba6d`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/commit/f02ba6d250e5efe89b3401bc0593de3aed3a9e08)
-  restores mounted-console SSR isolation, bounded manifest loading, explicit
-  public-asset routes, and honest mount-failure status removed by a later update.
-  Newer dashboards and routes are preserved. Four offline regression tests pass.
-  Provider readback reports RUNNING at this exact commit; `/api/panels/status`
-  reports MOUNTED, the root WebGL map renders, and `/static/app.py` returns 404.
-  Reachability and unsigned hash receipts do not establish execution authority,
-  cryptographic signing, or the readiness of every linked service.
+```bash
+git clone https://github.com/szl-holdings/szl-constellation.git
+cd szl-constellation
+python -m http.server 8000
+# open http://localhost:8000/holo/demo.html
+```
 
-- **v4.5 — 2026-09-04:** Restored the Hugging Face runtime at Space commit
-  [`5e4c2fc`](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation/commit/5e4c2fc59cee618de1e43b18e0c6b2ccd543b498).
-  The mounted Gradio consoles now disable SSR explicitly so their Node process
-  cannot take the Space's port from Uvicorn. The custom WebGL map, JSON APIs,
-  and `/panels` are live together. Static serving is restricted to the two
-  public manifests; application source and dependency files return 404.
+No build step, no dependencies, no API keys. The engine reads `estates.json` at the repo root and projects the estate registry into the field. If WebGL is missing, you get an honest static fallback notice — never a fake interface.
 
-Apache-2.0 · SZL Holdings
+## How to read the field
+
+| State | Gain | Meaning |
+|---|---|---|
+| **MEASURED** | full glow | The estate carries measured evidence — receipts, benches, signed runs |
+| **PROMOTED** | bright, cool tint | Passed a promotion gate |
+| **UNKNOWN** | neutral | No claim — reported, never fabricated |
+| **BLOCKED** | dim | A gate denied; the field shows the denial |
+| **INVALID** | nothing | Cross-revision or malformed comparison — it renders *nothing*, and the HUD counts the drop |
+
+Malformed estate entries are dropped at admission and the HUD displays the drop count — fail-closed is visible, not implied.
+
+## Repo map
+
+```
+.
+├── estates.json            # canonical estate registry (the data the field renders)
+├── verticals.json          # vertical → repo/kernel/model/dataset wiring
+├── holo/
+│   ├── szl-shader-fabric.js  # the GLSL engine (clean-room, Apache-2.0)
+│   ├── demo.html             # self-contained showcase page with HUD
+│   └── command.html          # earlier command surface
+├── frontier/archive_revival_v2/  # archive-revival lineage showcase
+├── space/                  # Gradio Space runtime (hosted on HF)
+└── docs/
+```
+
+## For investors (the 60-second read)
+
+This is the estate-as-product proof: one shader field whose every glow point is backed by a checkable artifact. Clicking any estate lands on a repo that itself ships hash-chained receipts. Scale check: [SZLHOLDINGS on Hugging Face](https://huggingface.co/SZLHOLDINGS) — 49 models, 41 datasets, and 27 Spaces (public inventory snapshot observed 2026-09-23) — including a [61K-download OSINT corpus](https://huggingface.co/datasets/SZLHOLDINGS/killinchu-osint-corpus) and hardware-trainable small models like [SZL-Khipu-1.5B](https://huggingface.co/SZLHOLDINGS/SZL-Khipu-1.5B). Verification proves integrity and origin, never accuracy — that boundary is stated on every card, and it is the company's moat.
+
+
+## Authority and wiring
+
+| Layer | Canonical location | Boundary |
+|---|---|---|
+| Canonical source | [https://github.com/szl-holdings/szl-constellation](https://github.com/szl-holdings/szl-constellation) | Inspectable source and Git history |
+| Hosted runtime | [https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation) | Separate deployment; not automatically GitHub main |
+| Receipt ledger | [https://huggingface.co/datasets/SZLHOLDINGS/szl-lake](https://huggingface.co/datasets/SZLHOLDINGS/szl-lake) | Append-only evidence receipts |
+| Estate pin | [https://github.com/szl-holdings/szl-pin](https://github.com/szl-holdings/szl-pin) | Deterministic source-head commitment |
+| Product | [https://a-11-oy.com](https://a-11-oy.com) | Operator/product surface |
+| Proof | [https://a11oy.net](https://a11oy.net) | Public proof and known bounds |
+| Formal campaign | [https://github.com/szl-holdings/lutar-lean/issues/287](https://github.com/szl-holdings/lutar-lean/issues/287) | Open Lambda / Lean campaign |
+
+**Alignment boundary:** Shader Fabric v1.1 is source-live at GitHub commit
+[\b232045\](https://github.com/szl-holdings/szl-constellation/commit/bb232045a3d345d7e65598e7cd8c8400a131b91d).
+Its source landing receipt is in
+[szl-lake](https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-23/holo-shader-fabric-v1.json).
+
+> **No runtime claim:** source state and hosted Space state remain separate until a
+> deployment receipt binds source SHA, Space revision, route check, and runtime evidence.
+
+## Verify, don't trust
+
+- Every landing ships a receipt to [SZLHOLDINGS/szl-lake](https://huggingface.co/datasets/SZLHOLDINGS/szl-lake) (UNSIGNED_HONEST unless signed).
+- The estate pinning layer: [`szl-pin`](https://github.com/szl-holdings/szl-pin) — one SHA-256 commits to every repo head. Drift is never silent.
+- Mutations to this README are source-level claims; runtime truth is only what you can recompute.
+
+---
+
+<sub>SZL Holdings · governed, receipted, verifiable · Λ = Conjecture 1 (advisory, never a theorem) · trust ceiling 0.97</sub>

@@ -10,8 +10,8 @@
  * (iResolution / iTime / iMouse). All code original.
  *
  * v1.1 sweep (no bandaids, no dead code):
- *  - removed unused FRAG_FB feedback stub; iChannel0 is not declared
- *    in v1.x. Trail rendering arrives when real ping-pong buffers land.
+ *  - feedback buffers are intentionally deferred until a complete,
+ *    tested ping-pong render path exists; no sampler is declared in v1.x.
  *  - ASCII-only identifiers (SzlShaderFabric).
  */
 'use strict';
