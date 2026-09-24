@@ -63,7 +63,7 @@ def _receipt(payload):
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "signature": "UNSIGNED_HONEST - hash commits to the payload; verify by recomputing"}
 
-def _fetch_json(url, timeout=8, payload=None):
+def _fetch_json(url, timeout=8, payload=None, *, expected_type=dict):
     data = json.dumps(payload, allow_nan=False).encode() if payload is not None else None
     req = urllib.request.Request(url, data=data, headers={"User-Agent": "szl-constellation/4.8", "Content-Type": "application/json", "Accept": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -74,9 +74,22 @@ def _fetch_json(url, timeout=8, payload=None):
         if len(raw) > MAX_PROXY_RESPONSE_BYTES:
             raise ValueError("upstream JSON exceeds response bound")
         decoded = _strict_json_loads(raw.decode("utf-8"))
-        if not isinstance(decoded, dict):
-            raise ValueError("upstream JSON object required")
+        if not isinstance(decoded, expected_type):
+            shape = "array" if expected_type is list else "object"
+            raise ValueError(f"upstream JSON {shape} required")
         return decoded
+
+
+def _fetch_hub_listing(url, timeout=8):
+    rows = _fetch_json(url, timeout=timeout, expected_type=list)
+    if any(
+        not isinstance(row, dict)
+        or not isinstance(row.get("id"), str)
+        or not row["id"].strip()
+        for row in rows
+    ):
+        raise ValueError("upstream Hub listing requires objects with non-empty string ids")
+    return rows
 
 
 def _bounded_response_bytes(response, *, limit, require_json=False):
@@ -558,7 +571,7 @@ def _measure_org():
                       ("models", "https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100"),
                       ("datasets", "https://huggingface.co/api/datasets?author=SZLHOLDINGS&limit=100")):
         try:
-            rows = _fetch_json(url, timeout=10)
+            rows = _fetch_hub_listing(url, timeout=10)
             out["huggingface"][kind] = {"count": len(rows),
                                         "names": sorted(r.get("id", "").split("/")[-1] for r in rows)}
         except Exception as e:
@@ -599,7 +612,7 @@ def kernel_line():
     def _go():
         wanted = set(MANIFEST.get("kernel_line", []))
         try:
-            models = _fetch_json("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
+            models = _fetch_hub_listing("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
         except Exception as e:
             return {"state": "UNAVAILABLE", "detail": f"hub api unreachable: {e}", "label": "UNAVAILABLE - no fabricated counts"}
         rows = []
@@ -616,7 +629,7 @@ def kernel_line():
 def khipu_line():
     def _go():
         try:
-            models = _fetch_json("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
+            models = _fetch_hub_listing("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
         except Exception as e:
             return {"state": "UNAVAILABLE", "detail": str(e)[:100]}
         rows = [{"model": m.get("id", "").split("/")[-1], "downloads": m.get("downloads", 0),

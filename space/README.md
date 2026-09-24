@@ -30,7 +30,7 @@ tags:
 
 Open the hologram: https://szlholdings-szl-constellation.hf.space/fabric
 
-Served engine and demo bytes match GitHub main 82399278d299db78e88070e6f88e5b8fbc6585d3 by SHA-256, and /healthz reports the deployed app.py hash. Real-browser WebGL rendering is not asserted by the receipt; no-WebGL browsers get an explicit static honest fallback.
+Served engine and demo bytes match GitHub main 82399278d299db78e88070e6f88e5b8fbc6585d3 by SHA-256, and /healthz reports the deployed app.py hash. Measured in headless Edge: WEBGL_CONTEXT_INITIALIZED, 49 estates, 0 dropped (https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-24/constellation-fabric-render-20260924T222547Z.json). No-WebGL browsers get an explicit static honest fallback.
 
 Runtime receipt: https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-24/constellation-fabric-runtime-20260924T214759Z.json
 
@@ -60,7 +60,7 @@ Hub repository: SZLHOLDINGS/szl-constellation
 - Merged source: 82399278d299db78e88070e6f88e5b8fbc6585d3
 - Receipt authority: https://huggingface.co/datasets/SZLHOLDINGS/szl-lake
 - Formal campaign: https://github.com/szl-holdings/lutar-lean/issues/287
-- Incident: INC-05-ORIGIN-SHA-LAG-4 remains OPEN.
+- Incident: INC-05-ORIGIN-SHA-LAG-4 CLOSED_VERIFIED 2026-09-24 (a-11-oy.com/honest git_sha equals GitHub a11oy main).
 - Evidence boundary: verification proves integrity and declared origin, not availability, readiness, or performance.
 
 Doctrine v11 - nothing glows that did not earn it.
