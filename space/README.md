@@ -8,6 +8,7 @@ sdk_version: 6.26.0
 python_version: '3.13'
 app_file: app.py
 pinned: true
+short_description: Estate map of SZL sources, receipts and live Hub state
 license: apache-2.0
 tags:
   - szl

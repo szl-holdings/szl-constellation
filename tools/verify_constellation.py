@@ -10,6 +10,8 @@ import json
 import re
 from pathlib import Path
 
+from constellation_targets import PRODUCTION, STAGING, TARGETS
+
 ROOT = Path(__file__).resolve().parents[1]
 SPACE = ROOT / "space"
 PUBLISH_WORKFLOW = ROOT / ".github" / "workflows" / "publish-constellation-space.yml"
@@ -108,6 +110,27 @@ def listener_contract(path: Path) -> dict[str, int | bool]:
     }
 
 
+def target_selection_lines() -> tuple[str, ...]:
+    """The exact workflow lines that map the dispatch input onto one target.
+
+    Derived from ``constellation_targets.TARGETS`` so the workflow, the
+    publisher and this verifier cannot disagree about ids or lock keys.
+    """
+
+    staging = "github.event_name == 'workflow_dispatch' && inputs.target == 'staging'"
+    return (
+        "concurrency:\n"
+        "      group: ${{ "
+        f"{staging} && '{TARGETS[STAGING].lock_group}' || '{TARGETS[PRODUCTION].lock_group}'"
+        " }}\n"
+        "      cancel-in-progress: false\n",
+        f"CONSTELLATION_TARGET: ${{{{ {staging} && '{STAGING}' || '{PRODUCTION}' }}}}",
+        "TARGET_SPACE: ${{ "
+        f"{staging} && '{TARGETS[STAGING].space_id}' || '{TARGETS[PRODUCTION].space_id}'"
+        " }}",
+    )
+
+
 def publisher_credential_contract(path: Path) -> dict[str, object]:
     """Prove the publisher selects and transports credentials fail-closed."""
 
@@ -117,9 +140,10 @@ def publisher_credential_contract(path: Path) -> dict[str, object]:
         "repository: szl-holdings/.github",
         f"ref: {CREDENTIAL_SELECTOR_REVISION}",
         ".shared-github/.github/scripts/acquire_hf_publisher_token.py",
-        "--target-repo SZLHOLDINGS/szl-constellation",
+        '--target-repo "${TARGET_SPACE}"',
         "--target-type space",
-        "--oidc-resource spaces/SZLHOLDINGS/szl-constellation",
+        '--oidc-resource "spaces/${TARGET_SPACE}"',
+        *target_selection_lines(),
         '--token-file "${RUNNER_TEMP}/constellation-hf-token"',
         "HF_ORG_TOKEN_CANDIDATE",
         "HF_ORG_TOKEN1_CANDIDATE",
@@ -150,6 +174,17 @@ def publisher_credential_contract(path: Path) -> dict[str, object]:
         raise AssertionError(
             "publisher entrypoint must appear once in paths, once in compilation, and once in the scoped publish step"
         )
+    if re.search(r"^concurrency:", text, flags=re.MULTILINE):
+        raise AssertionError(
+            "publisher lock must be the per-asset job lock, not a workflow-wide group"
+        )
+    named = set(re.findall(r"SZLHOLDINGS/[A-Za-z0-9._-]+", text))
+    allowed = {target.space_id for target in TARGETS.values()}
+    if named != allowed:
+        raise AssertionError(
+            f"publisher workflow names Hub ids outside its targets: {sorted(named - allowed)} "
+            f"or omits {sorted(allowed - named)}"
+        )
     return {
         "valid": True,
         "trustedPublisherRequested": True,
@@ -157,8 +192,37 @@ def publisher_credential_contract(path: Path) -> dict[str, object]:
         "selectorRevision": CREDENTIAL_SELECTOR_REVISION,
         "tokenTransport": "RESTRICTED_EPHEMERAL_FILE",
         "jobEnvironmentExported": False,
-        "target": "SZLHOLDINGS/szl-constellation",
+        "defaultTarget": PRODUCTION,
+        "targets": {
+            name: {
+                "spaceId": target.space_id,
+                "visibility": target.visibility,
+                "lock": target.lock_group,
+                "oidcResource": target.oidc_resource,
+            }
+            for name, target in sorted(TARGETS.items())
+        },
     }
+
+
+def space_identity_contract(path: Path) -> dict[str, object]:
+    """The runtime's allowlisted Space ids and hosts equal the publisher targets."""
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    declared: dict[str, object] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            name = node.targets[0]
+            if isinstance(name, ast.Name) and name.id in {"KNOWN_SPACE_HOSTS", "DEFAULT_SPACE_ID"}:
+                declared[name.id] = ast.literal_eval(node.value)
+    expected_hosts = {target.space_id: target.live_host for target in TARGETS.values()}
+    if declared.get("KNOWN_SPACE_HOSTS") != expected_hosts:
+        raise AssertionError(
+            f"app.py KNOWN_SPACE_HOSTS drifted from publisher targets: {declared.get('KNOWN_SPACE_HOSTS')!r}"
+        )
+    if declared.get("DEFAULT_SPACE_ID") != TARGETS[PRODUCTION].space_id:
+        raise AssertionError("app.py DEFAULT_SPACE_ID must be the production Space")
+    return {"valid": True, "knownSpaceHosts": expected_hosts}
 
 
 def verify() -> dict[str, object]:
@@ -190,6 +254,7 @@ def verify() -> dict[str, object]:
         raise AssertionError(f"single-listener contract failed: {listener}")
 
     publisher = publisher_credential_contract(PUBLISH_WORKFLOW)
+    identity = space_identity_contract(SPACE / "app.py")
 
     app_text = (SPACE / "app.py").read_text(encoding="utf-8")
     for route in (
@@ -220,6 +285,7 @@ def verify() -> dict[str, object]:
         "testPins": test_pins,
         "publisherPins": publish_pins,
         "publisherCredentialContract": publisher,
+        "spaceIdentity": identity,
         "listener": listener,
         "managedFileCount": len(managed_files),
         "managedFilesSha256": digests,
