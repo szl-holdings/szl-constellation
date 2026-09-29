@@ -211,27 +211,39 @@ def test_staging_publish_stays_private_and_reads_back_with_the_credential(run_pu
     assert TOKEN not in json.dumps(receipt)
 
 
-def test_public_staging_space_is_refused_before_any_write(run_publish):
-    with pytest.raises(RuntimeError, match="must be private"):
-        run_publish(targets.STAGING, private=False)
+VISIBILITY_MISMATCH = [
+    pytest.param(targets.STAGING, False, "must be private", id="public-staging"),
+    pytest.param(targets.PRODUCTION, True, "must be public", id="private-production"),
+]
 
 
-def test_public_staging_space_never_triggers_a_settings_write(monkeypatch, tmp_path):
-    target = targets.TARGETS[targets.STAGING]
-    hub = FakeHub(target, private=False)
-    monkeypatch.setenv("CONSTELLATION_TARGET", "staging")
-    for name, value in {
+@pytest.mark.parametrize("name,private,message", VISIBILITY_MISMATCH)
+def test_visibility_mismatch_is_refused_before_any_write(run_publish, name, private, message):
+    with pytest.raises(RuntimeError, match=message):
+        run_publish(name, private=private)
+
+
+@pytest.mark.parametrize("name,private,message", VISIBILITY_MISMATCH)
+def test_visibility_mismatch_never_triggers_a_settings_write(
+    monkeypatch, tmp_path, name, private, message
+):
+    # Visibility is an owner setting: the publisher only reads it, for both
+    # targets, and stops after the first repo_info.
+    target = targets.TARGETS[name]
+    hub = FakeHub(target, private=private)
+    monkeypatch.setenv("CONSTELLATION_TARGET", name)
+    for variable, value in {
         "HF_TOKEN": TOKEN,
         "GITHUB_TOKEN": "github-offline",
         "GITHUB_SHA": SOURCE,
         "GITHUB_RUN_ID": "1",
         "GITHUB_REPOSITORY": "szl-holdings/szl-constellation",
     }.items():
-        monkeypatch.setenv(name, value)
+        monkeypatch.setenv(variable, value)
     monkeypatch.setattr(publisher, "ROOT", tmp_path)
     monkeypatch.setattr(publisher, "HfApi", lambda token: hub)
     monkeypatch.setattr(publisher, "current_protected_main", lambda repository, token: SOURCE)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match=message):
         publisher.publish()
     assert [call[0] for call in hub.calls] == ["whoami", "repo_info"]
 

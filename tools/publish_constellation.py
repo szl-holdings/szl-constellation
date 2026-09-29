@@ -509,17 +509,16 @@ def publish() -> dict[str, Any]:
             files_metadata=True,
         )
         private_before = bool(getattr(info_before, "private", False))
+        # Visibility is an owner setting (plan section 7). The publisher never
+        # changes it for either target: a Space whose visibility differs from
+        # its declared target is refused before any write.
         if target.private and not private_before:
-            # Visibility is an owner setting; the publisher never changes it
-            # for the private target.
             raise RuntimeError(
                 f"{target.space_id} must be private before a staging publish"
             )
         if not target.private and private_before:
-            api.update_repo_settings(
-                repo_id=target.space_id,
-                repo_type=REPO_TYPE,
-                private=False,
+            raise RuntimeError(
+                f"{target.space_id} must be public before a production publish"
             )
         parent_revision = str(getattr(info_before, "sha", "") or "").lower()
         if SHA40.fullmatch(parent_revision) is None:
