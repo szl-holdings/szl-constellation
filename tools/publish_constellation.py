@@ -3,9 +3,12 @@
 """Publish protected-main Constellation source and prove the live runtime.
 
 GitHub protected main is the sole writer. The publisher commits the exact
-``space/`` tree plus a source-binding receipt to the fixed Hugging Face Space,
-waits for the provider source and runtime revisions to converge, verifies every
-immutable file byte, then exercises the public FastAPI/Gradio contracts.
+``space/`` tree plus a source-binding receipt to one of two fixed Hugging Face
+Spaces (``constellation_targets.TARGETS``), waits for the provider source and
+runtime revisions to converge, verifies every immutable file byte, then
+exercises the runtime contracts. The public production Space is probed
+anonymously. The private staging Space is read with the publisher credential,
+is never made public, and is not woken when it is asleep (plan decision D8).
 """
 
 from __future__ import annotations
@@ -25,13 +28,14 @@ from typing import Any
 
 from huggingface_hub import CommitOperationAdd, CommitOperationDelete, HfApi
 
+from constellation_targets import PRODUCTION, TARGETS, Target, resolve_target
 from verify_constellation import verify as verify_source
 
 ROOT = Path(__file__).resolve().parents[1]
 SPACE_ROOT = ROOT / "space"
-SPACE_ID = "SZLHOLDINGS/szl-constellation"
+SPACE_ID = TARGETS[PRODUCTION].space_id
 REPO_TYPE = "space"
-LIVE_BASE = "https://szlholdings-szl-constellation.hf.space"
+LIVE_BASE = TARGETS[PRODUCTION].live_base
 EXPECTED_REPOSITORY = "szl-holdings/szl-constellation"
 EXPECTED_HARDWARE = "cpu-basic"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
@@ -60,15 +64,19 @@ def bounded_read(response: Any, limit: int = MAX_RESPONSE_BYTES) -> bytes:
     return data
 
 
-def request_bytes(url: str, *, timeout: int = 30) -> tuple[int, str, bytes]:
-    request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "szl-constellation-publisher/1.0",
-            "Accept": "*/*",
-            "Cache-Control": "no-cache",
-        },
-    )
+def request_bytes(
+    url: str, *, timeout: int = 30, token: str | None = None
+) -> tuple[int, str, bytes]:
+    headers = {
+        "User-Agent": "szl-constellation-publisher/1.0",
+        "Accept": "*/*",
+        "Cache-Control": "no-cache",
+    }
+    if token:
+        # Only used for the private staging target, and only toward
+        # huggingface.co or the target's own *.hf.space host.
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return (
@@ -84,8 +92,10 @@ def request_bytes(url: str, *, timeout: int = 30) -> tuple[int, str, bytes]:
         )
 
 
-def request_json(url: str, *, timeout: int = 30) -> dict[str, Any]:
-    status, content_type, data = request_bytes(url, timeout=timeout)
+def request_json(
+    url: str, *, timeout: int = 30, token: str | None = None
+) -> dict[str, Any]:
+    status, content_type, data = request_bytes(url, timeout=timeout, token=token)
     if status != 200:
         raise RuntimeError(f"expected HTTP 200 from {url}, observed {status}")
     if "json" not in content_type.lower():
@@ -133,7 +143,11 @@ def tree_digest(files: dict[str, dict[str, Any]]) -> str:
     return sha256_bytes(canonical.encode("utf-8"))
 
 
-def stage_tree(source_revision: str, workflow_run_id: str) -> tuple[Path, tempfile.TemporaryDirectory[str], dict[str, dict[str, Any]]]:
+def stage_tree(
+    source_revision: str,
+    workflow_run_id: str,
+    target: Target = TARGETS[PRODUCTION],
+) -> tuple[Path, tempfile.TemporaryDirectory[str], dict[str, dict[str, Any]]]:
     holder: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(
         prefix="constellation-publish-"
     )
@@ -163,9 +177,10 @@ def stage_tree(source_revision: str, workflow_run_id: str) -> tuple[Path, tempfi
             "relation": "protected-main-canonical-publisher",
         },
         "destination": {
-            "repoId": SPACE_ID,
+            "target": target.name,
+            "repoId": target.space_id,
             "repoType": REPO_TYPE,
-            "visibility": "public",
+            "visibility": target.visibility,
             "hardware": EXPECTED_HARDWARE,
         },
         "workflow": {
@@ -188,8 +203,8 @@ def stage_tree(source_revision: str, workflow_run_id: str) -> tuple[Path, tempfi
     return stage, holder, managed
 
 
-def runtime_state(api: HfApi) -> dict[str, Any]:
-    runtime = api.get_space_runtime(repo_id=SPACE_ID)
+def runtime_state(api: HfApi, target: Target = TARGETS[PRODUCTION]) -> dict[str, Any]:
+    runtime = api.get_space_runtime(repo_id=target.space_id)
     raw = getattr(runtime, "raw", None)
     if not isinstance(raw, dict):
         raw = {}
@@ -207,56 +222,92 @@ def runtime_state(api: HfApi) -> dict[str, Any]:
         "replicasRequested": replicas.get("requested"),
         "domainReady": any(
             isinstance(item, dict)
-            and item.get("domain") == "szlholdings-szl-constellation.hf.space"
+            and item.get("domain") == target.live_host
             and item.get("stage") == "READY"
             for item in domains
         ),
     }
 
 
-def wait_for_runtime(api: HfApi, target_revision: str, timeout_seconds: int = 1200) -> dict[str, Any]:
+def wait_for_runtime(
+    api: HfApi,
+    target_revision: str,
+    timeout_seconds: int = 1200,
+    target: Target = TARGETS[PRODUCTION],
+    *,
+    sleep: Any = None,
+) -> dict[str, Any]:
+    sleep = sleep or time.sleep
     deadline = time.monotonic() + timeout_seconds
     last: dict[str, Any] = {}
     restarted = False
     while time.monotonic() < deadline:
-        info = api.repo_info(repo_id=SPACE_ID, repo_type=REPO_TYPE)
-        last = runtime_state(api)
+        info = api.repo_info(repo_id=target.space_id, repo_type=REPO_TYPE)
+        last = runtime_state(api, target)
         last["repoRevision"] = str(getattr(info, "sha", "") or "").lower()
         last["private"] = bool(getattr(info, "private", False))
         print(json.dumps({"providerObservation": last}, sort_keys=True), flush=True)
-        if last["private"]:
-            raise RuntimeError("destination Space became private")
-        if (
+        if last["private"] != target.private:
+            raise RuntimeError(
+                f"destination Space visibility drifted: expected {target.visibility}, "
+                f"observed private={last['private']}"
+            )
+        converged = (
             last["repoRevision"] == target_revision
             and last["sourceRevision"] == target_revision
             and last["stage"] == "RUNNING"
             and last["hardwareCurrent"] == EXPECTED_HARDWARE
             and last["hardwareRequested"] == EXPECTED_HARDWARE
-            and last["replicasCurrent"] == 1
-            and last["replicasRequested"] == 1
-            and last["domainReady"] is True
-        ):
+        )
+        if not target.private:
+            # Public edge readiness is part of the production contract. For the
+            # private target the authenticated /healthz app-bytes probe that
+            # follows is the runtime proof instead.
+            converged = (
+                converged
+                and last["replicasCurrent"] == 1
+                and last["replicasRequested"] == 1
+                and last["domainReady"] is True
+            )
+        if converged:
             return last
         if (
-            last["repoRevision"] == target_revision
+            not target.wake_if_sleeping
+            and last["repoRevision"] == target_revision
+            and last["stage"] in {"PAUSED", "SLEEPING"}
+        ):
+            # D8: a private Space asleep after the exact revision readback is
+            # terminal-OK. It is not woken, and no live probe is claimed.
+            last["terminalWithoutWake"] = True
+            return last
+        if (
+            target.wake_if_sleeping
+            and last["repoRevision"] == target_revision
             and last["stage"] in {"PAUSED", "SLEEPING", "STOPPED"}
             and not restarted
         ):
-            api.restart_space(repo_id=SPACE_ID, factory_reboot=False)
+            api.restart_space(repo_id=target.space_id, factory_reboot=False)
             restarted = True
         if last["stage"] in {"BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR"}:
             raise RuntimeError(f"provider runtime failed closed: {last}")
-        time.sleep(10)
+        sleep(10)
     raise TimeoutError(f"provider did not converge on {target_revision}: {last}")
 
 
-def immutable_bytes(revision: str, relative: str) -> bytes:
+def immutable_bytes(
+    revision: str,
+    relative: str,
+    target: Target = TARGETS[PRODUCTION],
+    token: str | None = None,
+) -> bytes:
     encoded = urllib.parse.quote(relative, safe="/")
     url = (
-        f"https://huggingface.co/spaces/{SPACE_ID}/resolve/{revision}/{encoded}"
+        f"https://huggingface.co/spaces/{target.space_id}/resolve/{revision}/{encoded}"
         "?download=true"
     )
-    status, _content_type, data = request_bytes(url, timeout=60)
+    status, _content_type, data = request_bytes(
+        url, timeout=60, token=token if target.private else None
+    )
     if status != 200:
         raise RuntimeError(f"immutable file unavailable: {relative} status={status}")
     return data
@@ -266,6 +317,8 @@ def verify_immutable_tree(
     api: HfApi,
     stage: Path,
     target_revision: str,
+    target: Target = TARGETS[PRODUCTION],
+    token: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     desired = {
         path.relative_to(stage).as_posix(): {
@@ -276,7 +329,7 @@ def verify_immutable_tree(
     }
     observed_paths = set(
         api.list_repo_files(
-            repo_id=SPACE_ID,
+            repo_id=target.space_id,
             repo_type=REPO_TYPE,
             revision=target_revision,
         )
@@ -288,7 +341,7 @@ def verify_immutable_tree(
             f"extra={sorted(observed_paths - set(desired))}"
         )
     for relative, expected in desired.items():
-        data = immutable_bytes(target_revision, relative)
+        data = immutable_bytes(target_revision, relative, target, token)
         observed = {"bytes": len(data), "sha256": sha256_bytes(data)}
         if observed != expected:
             raise RuntimeError(
@@ -376,7 +429,60 @@ def verify_live(target_revision: str) -> dict[str, Any]:
     raise TimeoutError(f"live contract did not converge: {last_error}")
 
 
+def verify_private_live(
+    target: Target,
+    token: str,
+    expected_app_sha256: str,
+    *,
+    attempts: int = 36,
+    sleep: Any = None,
+) -> dict[str, Any]:
+    """Probe a private Space with the publisher credential.
+
+    The private app cannot read its own provider revision anonymously, so its
+    ``/api/source`` stays UNAVAILABLE by design. The runtime identity proof is
+    instead ``/healthz`` reporting the SHA-256 of the app.py bytes it runs,
+    compared with the staged app.py.
+    """
+
+    sleep = sleep or time.sleep
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            health = request_json(target.live_base + "/healthz", timeout=45, token=token)
+            if health.get("ok") is not True:
+                raise AssertionError(f"health contract not ready: {health}")
+            if health.get("app_sha256") != expected_app_sha256:
+                raise AssertionError(
+                    "running app bytes differ from the published app.py: "
+                    f"expected={expected_app_sha256} observed={health.get('app_sha256')}"
+                )
+            return {
+                "attempt": attempt + 1,
+                "probe": "AUTHENTICATED_PRIVATE_HEALTHZ",
+                "health": health,
+                "appBytesMatch": True,
+            }
+        except Exception as error:  # retry during runtime propagation
+            last_error = error
+            print(
+                json.dumps(
+                    {
+                        "liveAttempt": attempt + 1,
+                        "state": "NOT_READY",
+                        "error": type(error).__name__,
+                        "detail": str(error)[:300],
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            sleep(10)
+    raise TimeoutError(f"private live contract did not converge: {last_error}")
+
+
 def publish() -> dict[str, Any]:
+    target = resolve_target()
     hf_token = required_env("HF_TOKEN")
     github_token = required_env("GITHUB_TOKEN")
     source_revision = required_env("GITHUB_SHA").lower()
@@ -393,26 +499,37 @@ def publish() -> dict[str, Any]:
         )
 
     local_verification = verify_source()
-    stage, holder, source_managed = stage_tree(source_revision, workflow_run_id)
+    stage, holder, source_managed = stage_tree(source_revision, workflow_run_id, target)
     try:
         api = HfApi(token=hf_token)
         api.whoami()
         info_before = api.repo_info(
-            repo_id=SPACE_ID,
+            repo_id=target.space_id,
             repo_type=REPO_TYPE,
             files_metadata=True,
         )
-        if bool(getattr(info_before, "private", False)):
+        private_before = bool(getattr(info_before, "private", False))
+        if target.private and not private_before:
+            # Visibility is an owner setting; the publisher never changes it
+            # for the private target.
+            raise RuntimeError(
+                f"{target.space_id} must be private before a staging publish"
+            )
+        if not target.private and private_before:
             api.update_repo_settings(
-                repo_id=SPACE_ID,
+                repo_id=target.space_id,
                 repo_type=REPO_TYPE,
                 private=False,
             )
         parent_revision = str(getattr(info_before, "sha", "") or "").lower()
         if SHA40.fullmatch(parent_revision) is None:
             raise RuntimeError("current destination revision unavailable")
-        before_runtime = runtime_state(api)
-        if before_runtime["hardwareCurrent"] != EXPECTED_HARDWARE:
+        before_runtime = runtime_state(api, target)
+        allowed_current = {EXPECTED_HARDWARE}
+        if target.private:
+            # A sleeping private Space reports no current hardware.
+            allowed_current.add(None)
+        if before_runtime["hardwareCurrent"] not in allowed_current:
             raise RuntimeError(f"unexpected paid/current hardware: {before_runtime}")
         if before_runtime["hardwareRequested"] != EXPECTED_HARDWARE:
             raise RuntimeError(f"unexpected requested hardware: {before_runtime}")
@@ -422,7 +539,7 @@ def publish() -> dict[str, Any]:
         }
         remote_paths = set(
             api.list_repo_files(
-                repo_id=SPACE_ID,
+                repo_id=target.space_id,
                 repo_type=REPO_TYPE,
                 revision=parent_revision,
             )
@@ -436,13 +553,14 @@ def publish() -> dict[str, Any]:
             for relative, path in sorted(desired_paths.items())
         )
         commit = api.create_commit(
-            repo_id=SPACE_ID,
+            repo_id=target.space_id,
             repo_type=REPO_TYPE,
             operations=operations,
             commit_message=f"publish protected source {source_revision[:12]}",
             commit_description=(
                 f"Source: {repository}@{source_revision}\n"
                 f"GitHub Actions run: {workflow_run_id}\n"
+                f"Target: {target.name}\n"
                 "Authority: protected-main canonical publisher"
             ),
             parent_commit=parent_revision,
@@ -455,10 +573,14 @@ def publish() -> dict[str, Any]:
         if SHA40.fullmatch(target_revision) is None:
             raise RuntimeError(f"publisher did not return immutable revision: {commit!r}")
 
-        provider = wait_for_runtime(api, target_revision)
-        immutable_files = verify_immutable_tree(api, stage, target_revision)
+        provider = wait_for_runtime(api, target_revision, target=target)
+        immutable_files = verify_immutable_tree(
+            api, stage, target_revision, target, hf_token
+        )
         binding = json.loads(
-            immutable_bytes(target_revision, "szl-source-binding.json").decode("utf-8")
+            immutable_bytes(
+                target_revision, "szl-source-binding.json", target, hf_token
+            ).decode("utf-8")
         )
         if binding.get("source", {}).get("revision") != source_revision:
             raise RuntimeError("immutable source binding lost GitHub revision")
@@ -467,10 +589,24 @@ def publish() -> dict[str, Any]:
         if binding.get("managedFiles") != source_managed:
             raise RuntimeError("immutable source binding managed-file set drifted")
 
-        live = verify_live(target_revision)
+        if not target.private:
+            live = verify_live(target_revision)
+            state = "DEPLOYED_LIVE_VERIFIED"
+        elif provider.get("terminalWithoutWake"):
+            live = {
+                "probe": "NOT_ATTEMPTED",
+                "reason": f"private Space is {provider['stage']} after exact revision readback (D8)",
+            }
+            state = "DEPLOYED_REVISION_VERIFIED_ASLEEP"
+        else:
+            live = verify_private_live(
+                target, hf_token, source_managed["app.py"]["sha256"]
+            )
+            state = "DEPLOYED_LIVE_VERIFIED"
         receipt = {
             "schema": "szl.constellation-deployment/v1",
-            "state": "DEPLOYED_LIVE_VERIFIED",
+            "state": state,
+            "target": target.name,
             "source": {
                 "repository": repository,
                 "revision": source_revision,
@@ -481,11 +617,12 @@ def publish() -> dict[str, Any]:
                 "runAttempt": os.environ.get("GITHUB_RUN_ATTEMPT", "1"),
             },
             "destination": {
-                "repoId": SPACE_ID,
+                "repoId": target.space_id,
                 "parentRevision": parent_revision,
                 "revision": target_revision,
                 "provider": provider,
-                "visibility": "public",
+                "visibility": target.visibility,
+                "lock": target.lock_group,
             },
             "localVerification": local_verification,
             "immutableFiles": immutable_files,

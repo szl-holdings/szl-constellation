@@ -7,31 +7,44 @@ on:
       - main
     paths:
       - space/**
+      - tools/constellation_targets.py
       - tools/publish_constellation.py
       - tools/run_publish_constellation.py
       - tools/verify_constellation.py
       - tools/requirements-publish.txt
+      - tools/tests/**
       - .github/workflows/constellation-ci.yml
       - .github/workflows/publish-constellation-space.yml
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Space to publish current protected main to (staging is private and dispatch-only)
+        type: choice
+        options:
+          - production
+          - staging
+        default: production
 
 permissions:
   contents: read
   id-token: write
-
-concurrency:
-  group: constellation-protected-main-publisher
-  cancel-in-progress: false
 
 jobs:
   publish:
     if: github.repository == 'szl-holdings/szl-constellation' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    # One lock per Hub asset (hf-write/<type>/<id>). A push always publishes
+    # production; only a dispatch with target=staging selects the private Space.
+    concurrency:
+      group: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'staging' && 'hf-write/space/SZLHOLDINGS/szl-constellation-staging' || 'hf-write/space/SZLHOLDINGS/szl-constellation' }}
+      cancel-in-progress: false
     env:
       GITHUB_TOKEN: ${{ github.token }}
       HF_HUB_DISABLE_TELEMETRY: "1"
       GRADIO_ANALYTICS_ENABLED: "False"
+      CONSTELLATION_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'staging' && 'staging' || 'production' }}
+      TARGET_SPACE: ${{ github.event_name == 'workflow_dispatch' && inputs.target == 'staging' && 'SZLHOLDINGS/szl-constellation-staging' || 'SZLHOLDINGS/szl-constellation' }}
     steps:
       - name: Harden runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -72,6 +85,7 @@ jobs:
             space/crosscheck.py \
             space/test_runtime_contract.py \
             space/tests/test_app.py \
+            tools/constellation_targets.py \
             tools/verify_constellation.py \
             tools/publish_constellation.py \
             tools/run_publish_constellation.py
@@ -79,6 +93,7 @@ jobs:
             cd space
             python -m pytest -q
           )
+          python -m pytest -q -p no:cacheprovider tools/tests
           python -m pip check
           find . -type d -name __pycache__ -prune -exec rm -rf {} +
           find . -type d -name .pytest_cache -prune -exec rm -rf {} +
@@ -108,9 +123,9 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts
           python .shared-github/.github/scripts/acquire_hf_publisher_token.py \
-            --target-repo SZLHOLDINGS/szl-constellation \
+            --target-repo "${TARGET_SPACE}" \
             --target-type space \
-            --oidc-resource spaces/SZLHOLDINGS/szl-constellation \
+            --oidc-resource "spaces/${TARGET_SPACE}" \
             --token-file "${RUNNER_TEMP}/constellation-hf-token" \
             --report artifacts/constellation-publisher-credential.json
 

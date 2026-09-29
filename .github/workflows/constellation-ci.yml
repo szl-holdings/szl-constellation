@@ -51,6 +51,7 @@ jobs:
             space/crosscheck.py \
             space/test_runtime_contract.py \
             space/tests/test_app.py \
+            tools/constellation_targets.py \
             tools/verify_constellation.py \
             tools/publish_constellation.py \
             tools/run_publish_constellation.py
@@ -61,6 +62,12 @@ jobs:
           GRADIO_ANALYTICS_ENABLED: "False"
           HF_HUB_DISABLE_TELEMETRY: "1"
         run: python -m pytest -q
+
+      - name: Run offline publisher target and lock contracts
+        env:
+          GRADIO_ANALYTICS_ENABLED: "False"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: python -m pytest -q -p no:cacheprovider tools/tests
 
       - name: Prove environment and tree are clean
         run: |

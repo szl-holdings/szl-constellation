@@ -21,7 +21,24 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = {}
 CACHE_TTL = 300
 SENTRA = "https://szlholdings-sentra.hf.space"
-SPACE_ID = "SZLHOLDINGS/szl-constellation"
+# The same source runs on the public Space and on the private staging Space.
+# Hugging Face sets SPACE_ID in the runtime; only these two ids are honoured,
+# anything else (including local runs) reports as the public Space.
+KNOWN_SPACE_HOSTS = {
+    "SZLHOLDINGS/szl-constellation": "szlholdings-szl-constellation.hf.space",
+    "SZLHOLDINGS/szl-constellation-staging": "szlholdings-szl-constellation-staging.hf.space",
+}
+DEFAULT_SPACE_ID = "SZLHOLDINGS/szl-constellation"
+
+
+def _resolve_space_id(declared=None):
+    value = os.environ.get("SPACE_ID", "") if declared is None else declared
+    value = str(value or "").strip()
+    return value if value in KNOWN_SPACE_HOSTS else DEFAULT_SPACE_ID
+
+
+SPACE_ID = _resolve_space_id()
+SPACE_HOST = KNOWN_SPACE_HOSTS[SPACE_ID]
 MAX_PROXY_RESPONSE_BYTES = 1_000_000
 MAX_CROSSCHECK_REQUEST_BYTES = 1_000_000
 
@@ -120,7 +137,7 @@ def _provider_runtime():
     domains = runtime.get("domains")
     domain_ready = isinstance(domains, list) and any(
         isinstance(item, dict)
-        and item.get("domain") == "szlholdings-szl-constellation.hf.space"
+        and item.get("domain") == SPACE_HOST
         and item.get("stage") == "READY"
         for item in domains
     )

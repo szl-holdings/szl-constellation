@@ -22,6 +22,7 @@ def main() -> int:
         failure = {
             "schema": "szl.constellation-deployment/v1",
             "state": "FAILED_CLOSED",
+            "target": os.environ.get("CONSTELLATION_TARGET") or "production",
             "source": {
                 "repository": os.environ.get("GITHUB_REPOSITORY"),
                 "revision": os.environ.get("GITHUB_SHA"),

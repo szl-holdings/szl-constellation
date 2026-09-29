@@ -67,6 +67,7 @@ This is the estate-as-product proof: one shader field whose every glow point is 
 |---|---|---|
 | Canonical source | [https://github.com/szl-holdings/szl-constellation](https://github.com/szl-holdings/szl-constellation) | Inspectable source and Git history |
 | Hosted runtime | [https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation](https://huggingface.co/spaces/SZLHOLDINGS/szl-constellation) | Separate deployment; not automatically GitHub main |
+| Staging runtime | `SZLHOLDINGS/szl-constellation-staging` (private) | Same `space/` tree; published only by dispatching `publish-constellation-space.yml` with `target: staging`; never made public |
 | Receipt ledger | [https://huggingface.co/datasets/SZLHOLDINGS/szl-lake](https://huggingface.co/datasets/SZLHOLDINGS/szl-lake) | Append-only evidence receipts |
 | Estate pin | [https://github.com/szl-holdings/szl-pin](https://github.com/szl-holdings/szl-pin) | Deterministic source-head commitment |
 | Product | [https://a-11-oy.com](https://a-11-oy.com) | Operator/product surface |
