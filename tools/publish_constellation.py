@@ -509,9 +509,9 @@ def publish() -> dict[str, Any]:
             files_metadata=True,
         )
         private_before = bool(getattr(info_before, "private", False))
-        # Visibility is an owner setting (plan section 7). The publisher never
-        # changes it for either target: a Space whose visibility differs from
-        # its declared target is refused before any write.
+        # Visibility is an owner setting. The publisher never changes it for
+        # either target: a Space whose visibility differs from its declared
+        # target is refused before any write.
         if target.private and not private_before:
             raise RuntimeError(
                 f"{target.space_id} must be private before a staging publish"
