@@ -1,4 +1,5 @@
 """Real JSON decoding regression coverage for the Hub's array API contracts."""
+from urllib.parse import urlsplit
 import io
 import json
 import os
@@ -24,7 +25,7 @@ def isolated_cache(monkeypatch):
 
 def test_estate_inventory_decodes_hub_arrays(monkeypatch):
     def upstream(request, timeout):
-        if "api.github.com" in request.full_url:
+        if urlsplit(request.full_url).hostname == "api.github.com":
             return _response({"total_count": 117})
         return _response([{"id": "SZLHOLDINGS/example"}])
 
