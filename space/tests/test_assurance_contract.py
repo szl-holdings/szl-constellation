@@ -85,6 +85,22 @@ def test_nonobject_or_empty_envelopes_fail_closed(monkeypatch, payload):
     _assert_no_verification_or_approval(constellation.assurance_contract(), "UNAVAILABLE")
 
 
+def test_public_failure_does_not_expose_exception_details(monkeypatch):
+    private_detail = "upstream-internal.test/private/path?token=synthetic-secret"
+
+    def fail(*args, **kwargs):
+        raise ValueError(private_detail)
+
+    monkeypatch.setattr(constellation, "_fetch_json", fail)
+    response = TestClient(constellation.app).get("/api/assurance/status")
+    assert response.status_code == 503
+    result = response.json()
+    _assert_no_verification_or_approval(result, "UNAVAILABLE")
+    assert result["detail"] == "upstream assurance contract unavailable or incompatible"
+    assert private_detail not in response.text
+    assert "synthetic-secret" not in response.text
+
+
 @pytest.mark.parametrize(
     "path",
     [

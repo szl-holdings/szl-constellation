@@ -307,12 +307,12 @@ def assurance_contract():
         }
         result["receipt"] = _receipt(result)
         return result
-    except Exception as exc:
+    except Exception:
         return {
             "state": "UNAVAILABLE",
             "receipt_verified": False,
             "approval_granted": False,
-            "detail": str(exc)[:120],
+            "detail": "upstream assurance contract unavailable or incompatible",
             "label": "UNAVAILABLE - no replacement verdict is computed locally",
         }
 
