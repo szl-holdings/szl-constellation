@@ -11,6 +11,7 @@ Public synthetic - no public effector. Lambda advisory. Doctrine v11.
 from szl_hologram_assets import A11OY_HOLO_CSS, A11OY_HOLO_HEAD, merge_hologram_css, merge_hologram_head
 import ast, hashlib, json, math, os, random, time, urllib.request
 from collections import deque
+from pathlib import Path
 from typing import Any
 
 from crosscheck import crosscheck_chains
@@ -43,6 +44,10 @@ SPACE_ID = _resolve_space_id()
 SPACE_HOST = KNOWN_SPACE_HOSTS[SPACE_ID]
 MAX_PROXY_RESPONSE_BYTES = 1_000_000
 MAX_CROSSCHECK_REQUEST_BYTES = 1_000_000
+MAX_SOURCE_BINDING_BYTES = 256_000
+MAX_SOURCE_BINDING_FILES = 128
+SOURCE_BINDING_NAME = "szl-source-binding.json"
+SOURCE_REPOSITORY = "szl-holdings/szl-constellation"
 
 
 class CrosscheckRequest(BaseModel):
@@ -202,6 +207,151 @@ def source_binding():
             "remote_app_sha256": None,
             "app_bytes_match": False,
             "immutable_source": None,
+            "detail": type(exc).__name__,
+        }
+
+
+def _unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate source-binding JSON key")
+        result[key] = value
+    return result
+
+
+def _hex_digest(value, length):
+    return (
+        isinstance(value, str)
+        and len(value) == length
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _verified_publisher_manifest(root, space_id):
+    """Check the publisher declaration against packaged bytes, without GitHub I/O."""
+    root = Path(root).resolve()
+    manifest_path = root / SOURCE_BINDING_NAME
+    if manifest_path.is_symlink() or not manifest_path.resolve().is_relative_to(root):
+        raise ValueError("source-binding manifest is outside the Space")
+    with manifest_path.open("rb") as source_file:
+        raw = source_file.read(MAX_SOURCE_BINDING_BYTES + 1)
+    if len(raw) > MAX_SOURCE_BINDING_BYTES:
+        raise ValueError("source-binding manifest exceeds byte bound")
+    manifest = json.loads(
+        raw.decode("utf-8"),
+        parse_constant=_reject_non_finite_json,
+        object_pairs_hook=_unique_json_object,
+    )
+    if not isinstance(manifest, dict):
+        raise ValueError("source-binding manifest must be an object")
+    if manifest.get("schema") != "szl.github-to-huggingface-source/v1":
+        raise ValueError("source-binding schema mismatch")
+    if manifest.get("state") != "SOURCE_BOUND_PUBLICATION":
+        raise ValueError("source-binding declaration state mismatch")
+
+    source = manifest.get("source")
+    if not isinstance(source, dict) or source.get("repository") != SOURCE_REPOSITORY:
+        raise ValueError("source-binding repository mismatch")
+    if source.get("path") != "space" or source.get("relation") != "protected-main-canonical-publisher":
+        raise ValueError("source-binding source path or relation mismatch")
+    if not _hex_digest(source.get("revision"), 40):
+        raise ValueError("source-binding GitHub revision is invalid")
+
+    if space_id not in KNOWN_SPACE_HOSTS:
+        raise ValueError("source-binding Space is not allowlisted")
+    is_production = space_id == DEFAULT_SPACE_ID
+    destination = manifest.get("destination")
+    if not isinstance(destination, dict) or destination != {
+        "target": "production" if is_production else "staging",
+        "repoId": space_id,
+        "repoType": "space",
+        "visibility": "public" if is_production else "private",
+        "hardware": "cpu-basic",
+    }:
+        raise ValueError("source-binding destination mismatch")
+
+    workflow = manifest.get("workflow")
+    if not isinstance(workflow, dict) or not all(
+        isinstance(workflow.get(key), str)
+        and workflow[key].isascii()
+        and workflow[key].isdecimal()
+        and int(workflow[key]) > 0
+        for key in ("runId", "runAttempt")
+    ):
+        raise ValueError("source-binding workflow identity is invalid")
+
+    managed = manifest.get("managedFiles")
+    if not isinstance(managed, dict) or not 1 <= len(managed) <= MAX_SOURCE_BINDING_FILES:
+        raise ValueError("source-binding managed-file set is invalid")
+    if not {"app.py", "README.md", "estates.json", "verticals.json"}.issubset(managed):
+        raise ValueError("source-binding required files are missing")
+    observed = {}
+    for relative, declared in managed.items():
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or relative == SOURCE_BINDING_NAME
+            or "\\" in relative
+            or ":" in relative
+            or any(part in {"", ".", ".."} for part in relative.split("/"))
+        ):
+            raise ValueError("source-binding file path is invalid")
+        if (
+            not isinstance(declared, dict)
+            or set(declared) != {"bytes", "sha256"}
+            or type(declared["bytes"]) is not int
+            or declared["bytes"] < 0
+            or not _hex_digest(declared["sha256"], 64)
+        ):
+            raise ValueError("source-binding file metadata is invalid")
+        parts = relative.split("/")
+        local_file = root.joinpath(*parts)
+        if any(root.joinpath(*parts[:depth]).is_symlink() for depth in range(1, len(parts) + 1)):
+            raise ValueError("source-binding file path contains a symlink")
+        if not local_file.is_file() or not local_file.resolve().is_relative_to(root):
+            raise ValueError("source-binding file is missing or outside the Space")
+        digest = hashlib.sha256()
+        size = 0
+        with local_file.open("rb") as asset:
+            for chunk in iter(lambda: asset.read(1024 * 1024), b""):
+                size += len(chunk)
+                digest.update(chunk)
+        observed[relative] = {"bytes": size, "sha256": digest.hexdigest()}
+        if observed[relative] != declared:
+            raise ValueError("source-binding file bytes differ from declaration")
+
+    tree_sha256 = hashlib.sha256(
+        json.dumps(observed, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if manifest.get("managedTreeSha256") != tree_sha256:
+        raise ValueError("source-binding managed-tree digest mismatch")
+    return {
+        "state": "LOCAL_BYTES_VERIFIED",
+        "source_authority": "PUBLISHER_DECLARED",
+        "github_attestation": "NOT_PERFORMED_AT_RUNTIME",
+        "space_id": space_id,
+        "source_repository": SOURCE_REPOSITORY,
+        "source_revision": source["revision"],
+        "publisher_run_id": workflow["runId"],
+        "managed_file_count": len(observed),
+        "managed_tree_sha256": tree_sha256,
+        "manifest_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
+def publisher_source_binding(root=None, space_id=None):
+    """Return only locally checked publisher claims; never imply GitHub was queried."""
+    selected_space = SPACE_ID if space_id is None else space_id
+    try:
+        return _verified_publisher_manifest(HERE if root is None else root, selected_space)
+    except Exception as exc:
+        return {
+            "state": "UNAVAILABLE",
+            "source_authority": "PUBLISHER_DECLARED",
+            "github_attestation": "NOT_PERFORMED_AT_RUNTIME",
+            "space_id": selected_space,
+            "source_revision": "UNAVAILABLE",
             "detail": type(exc).__name__,
         }
 
@@ -1013,7 +1163,16 @@ def create_app():
 
     @app.get("/api/build-info")
     def api_build_info():
-        return {"schema": "szl.build-info/v1", **source_binding()}
+        hub = source_binding()
+        publisher = publisher_source_binding()
+        return {
+            "schema": "szl.build-info/v1",
+            **hub,
+            "state": "MEASURED"
+            if hub["state"] == "MEASURED" and publisher["state"] == "LOCAL_BYTES_VERIFIED"
+            else "UNAVAILABLE",
+            "publisher_binding": publisher,
+        }
 
     @app.get("/api/c2/scenario")
     def api_c2_scenario(seed: int = 7, n: int = 28):
@@ -1149,16 +1308,18 @@ def create_app():
     @app.get("/readyz")
     def readyz():
         binding = source_binding()
+        publisher = publisher_source_binding()
         listener = listener_source_contract()
         checks = {
             "manifests_loaded": bool(MANIFEST.get("estates")) and bool(VERTICALS.get("verticals")),
             "panels_mounted": panels_error is None,
             "source_revision_measured": binding["state"] == "MEASURED",
+            "publisher_source_binding_local_bytes_verified": publisher["state"] == "LOCAL_BYTES_VERIFIED",
             "single_listener_source_contract_validated": listener["valid"],
         }
         ready = all(checks.values())
         return JSONResponse(
-            {"ready": ready, "state": "MEASURED" if ready else "UNAVAILABLE", "checks": checks, "source": binding, "listener_contract": listener},
+            {"ready": ready, "state": "MEASURED" if ready else "UNAVAILABLE", "checks": checks, "source": binding, "publisher_binding": publisher, "listener_contract": listener},
             status_code=200 if ready else 503,
         )
 

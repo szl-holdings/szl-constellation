@@ -59,6 +59,16 @@ def test_health_ready_and_exact_source_contract(client, monkeypatch):
         "_remote_app_sha256",
         lambda revision: (constellation._local_app_sha256(), f"https://example.test/{revision}/app.py"),
     )
+    monkeypatch.setattr(
+        constellation,
+        "publisher_source_binding",
+        lambda: {
+            "state": "LOCAL_BYTES_VERIFIED",
+            "source_authority": "PUBLISHER_DECLARED",
+            "github_attestation": "NOT_PERFORMED_AT_RUNTIME",
+            "source_revision": "b" * 40,
+        },
+    )
     health = client.get("/healthz")
     assert health.status_code == 200
     assert health.json()["ok"] is True
@@ -71,12 +81,47 @@ def test_health_ready_and_exact_source_contract(client, monkeypatch):
     assert source.json()["immutable_source"].endswith(("a" * 40) + "/app.py")
     assert source.json()["app_bytes_match"] is True
 
+    build = client.get("/api/build-info")
+    assert build.status_code == 200
+    assert build.json()["state"] == "MEASURED"
+    assert build.json()["publisher_binding"]["source_revision"] == "b" * 40
+    assert build.json()["publisher_binding"]["github_attestation"] == "NOT_PERFORMED_AT_RUNTIME"
+
     ready = client.get("/readyz")
     assert ready.status_code == 200
     assert ready.json()["ready"] is True
     assert all(ready.json()["checks"].values())
     assert ready.json()["listener_contract"]["state"] == "METHOD"
     assert ready.json()["listener_contract"]["uvicorn_run_calls"] == 1
+    assert ready.json()["checks"]["publisher_source_binding_local_bytes_verified"] is True
+
+
+def test_missing_publisher_binding_fails_readiness_closed(client, monkeypatch):
+    monkeypatch.setattr(
+        constellation,
+        "source_binding",
+        lambda: {"state": "MEASURED", "source_revision": "a" * 40},
+    )
+    monkeypatch.setattr(
+        constellation,
+        "publisher_source_binding",
+        lambda: {
+            "state": "UNAVAILABLE",
+            "source_authority": "PUBLISHER_DECLARED",
+            "github_attestation": "NOT_PERFORMED_AT_RUNTIME",
+            "source_revision": "UNAVAILABLE",
+        },
+    )
+    build = client.get("/api/build-info")
+    assert build.status_code == 200
+    assert build.json()["state"] == "UNAVAILABLE"
+    assert build.json()["publisher_binding"]["source_revision"] == "UNAVAILABLE"
+
+    ready = client.get("/readyz")
+    assert ready.status_code == 503
+    assert ready.json()["ready"] is False
+    assert ready.json()["checks"]["source_revision_measured"] is True
+    assert ready.json()["checks"]["publisher_source_binding_local_bytes_verified"] is False
 
 
 def test_runtime_has_exactly_one_listener_and_ssr_is_disabled():
