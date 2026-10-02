@@ -1,5 +1,12 @@
 # Consolidation of Record — Sentra absorbs Aegis — 2026-09-04
 
+> **Runtime instructions superseded — October 1, 2026.** This document preserves
+> the historical owner consolidation directive. The v5 overlay, deployment
+> instructions, and verification commands below are not the current runtime
+> contract. The deployed facade has retired the GATE/YAWAR/plane-registry routes.
+> Follow [the current assurance contract](ASSURANCE-CONTRACT.md) for Constellation
+> integration; do not restore those routes from this historical record.
+
 **Directive:** owner. *"Aegis fully consolidated into Sentra; Sentra is the sole
 flagship for assurance."*
 

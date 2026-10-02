@@ -21,6 +21,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = {}
 CACHE_TTL = 300
 SENTRA = "https://szlholdings-sentra.hf.space"
+ASSURANCE_VERIFIER = "https://szlholdings-a11oy.hf.space/api/a11oy/v1/verify/receipt"
+ASSURANCE_UI = "https://szlholdings-a11oy.hf.space/verify"
 # The same source runs on the public Space and on the private staging Space.
 # Hugging Face sets SPACE_ID in the runtime; only these two ids are honoured,
 # anything else (including local runs) reports as the public Space.
@@ -257,60 +259,85 @@ def _probe(url, timeout=6):
     except Exception as e:
         return {"url": url, "state": "UNAVAILABLE", "detail": str(e)[:100]}
 
-# ---------- sentra flagship proxies ----------
+# ---------- current read-only assurance contract ----------
+
+def assurance_contract():
+    """Report the current facade contract, never an admission or receipt verdict."""
+    try:
+        facade = _fetch_json(SENTRA + "/api/live", timeout=12)
+        if not isinstance(facade, dict) or (
+            facade.get("status") != "REACHABLE"
+            or type(facade.get("http_status")) is not int
+            or facade["http_status"] != 200
+            or facade.get("receipt_verified") is not False
+            or facade.get("source") != ASSURANCE_VERIFIER
+        ):
+            raise ValueError("read-only assurance facade contract invalid")
+        manifest = facade.get("data")
+        if not isinstance(manifest, dict):
+            raise ValueError("verifier manifest unavailable")
+        trial = manifest.get("try")
+        reproduce = manifest.get("reproduce")
+        evidence = manifest.get("evidence")
+        if (
+            manifest.get("schema") != "szl.public-receipt-verifier/manifest/v1"
+            or manifest.get("state") != "LIVE"
+            or not isinstance(trial, dict)
+            or trial.get("method") != "POST"
+            or trial.get("endpoint") != "/api/a11oy/v1/verify/receipt"
+            or not isinstance(reproduce, dict)
+            or reproduce.get("human_ui") != "/verify"
+            or not isinstance(evidence, list)
+            or len(evidence) != 3
+            or any(not isinstance(check, str) for check in evidence)
+            or set(evidence) != {"signature", "payload_digest", "hash_chain"}
+        ):
+            raise ValueError("canonical receipt-verifier manifest contract invalid")
+        result = {
+            "state": "REPORTED",
+            "source": SENTRA + "/api/live",
+            "provider_reachable": True,
+            "receipt_verified": False,
+            "approval_granted": False,
+            "verifier": ASSURANCE_VERIFIER,
+            "verifier_ui": ASSURANCE_UI,
+            "manifest_schema": manifest["schema"],
+            "checks_declared": evidence,
+            "label": "REPORTED - upstream contract is reachable; no receipt was verified and no action was approved",
+        }
+        result["receipt"] = _receipt(result)
+        return result
+    except Exception as exc:
+        return {
+            "state": "UNAVAILABLE",
+            "receipt_verified": False,
+            "approval_granted": False,
+            "detail": str(exc)[:120],
+            "label": "UNAVAILABLE - no replacement verdict is computed locally",
+        }
+
+
+def _retired_assurance_contract():
+    return {
+        "state": "UNAVAILABLE",
+        "reason": "RETIRED_CONTRACT",
+        "receipt_verified": False,
+        "approval_granted": False,
+        "replacement": "/api/assurance/status",
+        "label": "UNAVAILABLE - legacy assurance planes are retired; the replacement is read-only receipt verification, not admission",
+    }
+
 
 def sentra_gate_proxy(scores_text, weights_text, threshold):
-    try:
-        scores = [float(x) for x in (scores_text or "").split(",") if x.strip()]
-        weights = [float(x) for x in (weights_text or "").split(",") if x.strip()] or None
-        threshold = float(threshold)
-        total_weight = sum(weights) if weights is not None else None
-        if not scores or any(not math.isfinite(score) or not 0.0 <= score <= 1.0 for score in scores):
-            raise ValueError("scores must be finite values in [0,1]")
-        if weights is not None and (
-            len(weights) != len(scores)
-            or any(not math.isfinite(weight) or weight < 0.0 for weight in weights)
-            or not math.isfinite(total_weight)
-            or total_weight <= 0.0
-        ):
-            raise ValueError("weights must match scores, be finite/non-negative, and have positive sum")
-        if not math.isfinite(threshold) or not 0.0 <= threshold <= 1.0:
-            raise ValueError("threshold must be finite and in [0,1]")
-        d = _fetch_json(SENTRA + "/api/sentra/gate", timeout=12,
-                        payload={"action": {"type": "assurance.gate.evaluate", "scores": scores,
-                                            "weights": weights, "threshold": threshold},
-                                 "axes": scores, "request_id": "constellation-console"})
-        if d.get("decision") not in {"allow", "deny"} or d.get("fail_closed") is not True:
-            raise ValueError("flagship verdict contract invalid")
-        return {"state": "MEASURED", "flagship": SENTRA, "verdict": d,
-                "label": "MEASURED - verdict computed by the sentra flagship, proxied verbatim"}
-    except Exception as e:
-        return {"state": "UNAVAILABLE", "detail": f"flagship plane not reachable: {str(e)[:120]}",
-                "note": "the GATE plane ships with the sentra v5 deploy (owner path); until then this console reports instead of pretending",
-                "label": "UNAVAILABLE - never computed locally in place of the flagship"}
+    return _retired_assurance_contract()
+
 
 def sentra_yawar_proxy(chain_text):
-    try:
-        d = _fetch_json(SENTRA + "/api/sentra/yawar/verify", timeout=12, payload={"chain": chain_text or ""})
-        if not isinstance(d.get("chain_verified"), bool):
-            raise ValueError("flagship verification contract invalid")
-        return {"state": "MEASURED", "flagship": SENTRA, "verification": d,
-                "label": "MEASURED - chain recomputed by the sentra flagship, proxied verbatim"}
-    except Exception as e:
-        return {"state": "UNAVAILABLE", "detail": f"flagship plane not reachable: {str(e)[:120]}",
-                "note": "the YAWAR plane ships with the sentra v5 deploy; until then this console reports instead of pretending",
-                "label": "UNAVAILABLE - never computed locally in place of the flagship"}
+    return _retired_assurance_contract()
+
 
 def sentra_planes():
-    try:
-        d = _fetch_json(SENTRA + "/api/sentra/planes", timeout=10)
-        if not isinstance(d.get("planes"), list):
-            raise ValueError("flagship plane registry contract invalid")
-        return {"state": "MEASURED", "planes": d, "label": "MEASURED - live from the flagship"}
-    except Exception as e:
-        return {"state": "UNAVAILABLE", "detail": str(e)[:120],
-                "declared": ["GATE (admission, advisory-only, deny-by-default)", "YAWAR (receipt-chain verify)", "EVIDENCE (upstream probe)"],
-                "label": "UNAVAILABLE - declared plane list shown, nothing fabricated"}
+    return _retired_assurance_contract()
 
 # ---------- C2 scenario engine (public synthetic) ----------
 
@@ -832,20 +859,13 @@ def build_consoles():
                 qout2 = gr.JSON(label="quant curve")
                 gr.Button("Measure").click(quant_curve, qb2, qout2)
             with gr.Tab("Sentra Assurance"):
-                gr.HTML("""<div class="wire" style="--accent:#8a6bff"><h4>Sentra &middot; <span style="color:#6b7a99">Assurance Command</span></h4>
-<div class="motif">the gate iris</div>
-<div style="font-size:12.5px;line-height:1.6">Proxied to the flagship. GATE is advisory and deny-by-default; YAWAR recomputes chains link by link.
-Until the v5 deploy lands, this console reports UNAVAILABLE - it never computes verdicts in the flagship's place.</div></div>""")
-                gp = gr.JSON(label="plane registry (live)")
-                gr.Button("Read the plane registry").click(sentra_planes, None, gp)
-                gs = gr.Textbox(label="GATE axis scores (comma-separated)", value="0.9,0.95,0.99,0.92")
-                gw = gr.Textbox(label="weights", value="1,1,2,1")
-                gt = gr.Slider(0.5, 1.0, 0.97, label="advisory threshold")
-                gout = gr.JSON(label="flagship GATE verdict")
-                gr.Button("Evaluate at the flagship", variant="primary").click(sentra_gate_proxy, [gs, gw, gt], gout)
-                yc = gr.Textbox(lines=6, label="YAWAR receipt chain (JSON array)")
-                yout = gr.JSON(label="flagship YAWAR verification")
-                gr.Button("Verify at the flagship").click(sentra_yawar_proxy, yc, yout)
+                gr.HTML("""<div class="wire" style="--accent:#8a6bff"><h4>Assurance &middot; <span style="color:#6b7a99">Receipt verification</span></h4>
+<div class="motif">read-only evidence</div>
+<div style="font-size:12.5px;line-height:1.6">The current facade reports the canonical verifier contract. Legacy GATE/YAWAR planes are retired.
+Reachability is not verification. Open the canonical verifier to check a receipt's signature, payload digest, and hash chain; verification never grants action approval.</div></div>""")
+                gp = gr.JSON(label="current assurance contract (reported, not a verdict)")
+                gr.Button("Read current assurance contract").click(assurance_contract, None, gp)
+                gr.Button("Open canonical receipt verifier", link=ASSURANCE_UI)
             with gr.Tab("Receipt Curve"):
                 rc = gr.Textbox(lines=7, label="Receipt chain (JSON array)",
                                 placeholder='[{"seq":0,"prev_hash":"000...","chain_hash":"..."}, ...]')
@@ -1033,7 +1053,12 @@ def create_app():
 
     @app.get("/api/sentra/planes")
     def api_sentra_planes():
-        return sentra_planes()
+        return JSONResponse(sentra_planes(), status_code=410)
+
+    @app.get("/api/assurance/status")
+    def api_assurance_status():
+        result = assurance_contract()
+        return JSONResponse(result, status_code=200 if result["state"] == "REPORTED" else 503)
 
     @app.get("/api/receipts/curve")
     def api_receipt_curve(chain: str = "[]"):
