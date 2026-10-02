@@ -28,7 +28,7 @@ from typing import Any
 
 from huggingface_hub import CommitOperationAdd, CommitOperationDelete, HfApi
 
-from constellation_targets import PRODUCTION, TARGETS, Target, resolve_target
+from constellation_targets import PRODUCTION, STAGING, TARGETS, Target, resolve_target
 from verify_constellation import verify as verify_source
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +64,36 @@ def bounded_read(response: Any, limit: int = MAX_RESPONSE_BYTES) -> bytes:
     return data
 
 
+def credential_origin(url: str) -> tuple[str, str, int]:
+    """Bound private read credentials to the Hub or the fixed staging host."""
+    parsed = urllib.parse.urlsplit(url)
+    try:
+        port = parsed.port
+    except ValueError:
+        raise RuntimeError("credential request has an invalid origin") from None
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname not in {"huggingface.co", TARGETS[STAGING].live_host}
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in {None, 443}
+    ):
+        raise RuntimeError("credential request requires an allowlisted HTTPS origin")
+    return "https", parsed.hostname, 443
+
+
+class CredentialRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects before urllib can copy a bearer header to another origin."""
+
+    def __init__(self, origin: tuple[str, str, int]) -> None:
+        self.origin = origin
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if credential_origin(newurl) != self.origin:
+            raise RuntimeError("credential redirect changed origin")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def request_bytes(
     url: str, *, timeout: int = 30, token: str | None = None
 ) -> tuple[int, str, bytes]:
@@ -72,13 +102,17 @@ def request_bytes(
         "Accept": "*/*",
         "Cache-Control": "no-cache",
     }
+    opener = urllib.request.urlopen
     if token:
-        # Only used for the private staging target, and only toward
-        # huggingface.co or the target's own *.hf.space host.
+        # Private readback is closed to two HTTPS origins. urllib's default
+        # redirect handler copies Authorization; constrain every hop before
+        # that handler can forward the publisher credential.
+        origin = credential_origin(url)
+        opener = urllib.request.build_opener(CredentialRedirectHandler(origin)).open
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with opener(request, timeout=timeout) as response:
             return (
                 int(response.status),
                 str(response.headers.get("Content-Type") or ""),

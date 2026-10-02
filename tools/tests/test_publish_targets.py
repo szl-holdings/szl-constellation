@@ -322,6 +322,9 @@ def test_bearer_header_only_when_a_token_is_given(monkeypatch):
         return Response()
 
     monkeypatch.setattr(publisher.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(
+        publisher.urllib.request, "build_opener", lambda handler: SimpleNamespace(open=urlopen)
+    )
     publisher.request_bytes("https://huggingface.co/x")
     publisher.request_bytes("https://huggingface.co/x", token=TOKEN)
     assert seen == [None, f"Bearer {TOKEN}"]
