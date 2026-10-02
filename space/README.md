@@ -31,7 +31,12 @@ tags:
 
 Open the hologram: https://szlholdings-szl-constellation.hf.space/fabric
 
-Served engine and demo bytes match GitHub main 82399278d299db78e88070e6f88e5b8fbc6585d3 by SHA-256, and /healthz reports the deployed app.py hash. Measured in headless Edge: WEBGL_CONTEXT_INITIALIZED, 49 estates, 0 dropped (https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-24/constellation-fabric-render-20260924T222547Z.json). No-WebGL browsers get an explicit static honest fallback.
+In the September 24 snapshot, served engine and demo bytes matched GitHub source
+82399278d299db78e88070e6f88e5b8fbc6585d3 by SHA-256; this is not a claim
+about the current main branch. `/healthz` reports the running app.py hash. The
+headless Edge observation was WEBGL_CONTEXT_INITIALIZED, 49 estates, 0 dropped
+(https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-24/constellation-fabric-render-20260924T222547Z.json).
+No-WebGL browsers get an explicit static honest fallback.
 
 Runtime receipt: https://huggingface.co/datasets/SZLHOLDINGS/szl-lake/blob/main/receipts/2026-09-24/constellation-fabric-runtime-20260924T214759Z.json
 
@@ -57,8 +62,20 @@ python -m http.server 8000
 
 Hub repository: SZLHOLDINGS/szl-constellation
 
+`GET /api/build-info` reports the running Hub revision and a separate
+`publisher_binding` with the protected GitHub source revision and publisher run
+declared in `szl-source-binding.json`. `LOCAL_BYTES_VERIFIED` means the running
+Space recomputed every managed file's size and SHA-256, the managed-tree digest,
+and the packaged manifest hash. It does not independently attest the GitHub
+commit at request time. A missing or inconsistent manifest makes `GET /readyz`
+return 503; `GET /healthz` remains a basic process-health check.
+
 - Source authority: https://github.com/szl-holdings/szl-constellation
-- Merged source: 82399278d299db78e88070e6f88e5b8fbc6585d3
+- Current publisher-declared source: inspect `publisher_binding.source_revision`
+  and its state at `GET /api/build-info`; confirm the protected publisher run
+  and immutable Hub revision independently before treating it as deployed.
+- Historical source snapshot: 82399278d299db78e88070e6f88e5b8fbc6585d3
+  (September 24 render receipt above).
 - Receipt authority: https://huggingface.co/datasets/SZLHOLDINGS/szl-lake
 - Formal campaign: https://github.com/szl-holdings/lutar-lean/issues/287
 - Incident: INC-05-ORIGIN-SHA-LAG-4 CLOSED_VERIFIED 2026-09-24 (a-11-oy.com/honest git_sha equals GitHub a11oy main).
