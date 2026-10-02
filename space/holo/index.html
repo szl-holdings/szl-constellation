@@ -464,13 +464,16 @@ async function boot(){
       panelBody.innerHTML = `
         <span class="tier" style="border:1px solid ${hex(TIER_COLORS[e.tier]??0x5b8dee)}55;color:${hex(TIER_COLORS[e.tier]??0x5b8dee)};background:${hex(TIER_COLORS[e.tier]??0x5b8dee)}18">${e.tier}</span>
         <h2>${e.name}</h2>
-        <div class="files">${e.files} files · unarchived${vOf?` · wired to <b style="color:#64d97a">${vOf.name}</b>`:''}</div>
+        <div class="files">${e.release?`${e.files} files at release source ${e.release.source_revision.slice(0,12)}`:`${e.files} files · unarchived${vOf?` · wired to <b style="color:#64d97a">${vOf.name}</b>`:''}`}</div>
         <div class="desc">${e.desc}</div>
         <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='REACHABLE'?' — answered a live ping':''}</div>
-        <div class="hubline">Wired into <b>${hub.label}</b> — ${hub.desc}</div>
+        <div class="hubline">${e.hub_relation==='CURATED_PORTFOLIO_GROUPING'?'Catalogued with':'Wired into'} <b>${hub.label}</b> — ${hub.desc}</div>
+        ${e.release?`<div class="hubline">Published prerelease <b>${e.release.tag}</b> · source ${e.release.source_revision.slice(0,12)} · ZIP assets, not a running service</div>`:''}
         <div class="links">
           ${e.repo?`<a href="https://github.com/${e.repo}" target="_blank" rel="noopener">⌥ source · github.com/${e.repo}</a>`:''}
           ${(e.live||[]).map(u=>`<a href="${u}" target="_blank" rel="noopener">↗ live · ${u.replace('https://','')}</a>`).join('')}
+          ${e.release?`<a href="${e.release.url}" target="_blank" rel="noopener">↓ published ZIPs · ${e.release.tag}</a><a href="https://github.com/${e.repo}/tree/${e.release.source_revision}" target="_blank" rel="noopener">⌁ immutable release source</a>`:''}
+          ${e.candidate?`<a href="${e.candidate.url}" target="_blank" rel="noopener">◇ source candidate · PR #${e.candidate.number} (outside release)</a>`:''}
           <a href="${hub.url}" target="_blank" rel="noopener">◈ hub · ${hub.label.toLowerCase()}</a>
         </div>`;
       vertThreads.forEach(t=>{ t.line.material.opacity = (t.estate===e.name) ? .65 : (spotlight?.3:0); });
