@@ -18,6 +18,28 @@ tags:
   - constellation
 ---
 
+<p><a href="https://huggingface.co/spaces/SZLHOLDINGS/szl-command-lab"><img src="https://raw.githubusercontent.com/szl-holdings/.github/main/profile/assets/szl/logos/szl_mark_holographic.svg" alt="SZL Holdings" width="112" /></a></p>
+
+# SZL Constellation
+
+Explore the retained estate topology through its visual fabric and source-bound publication evidence.
+
+**Artifact:** Portfolio visualization · **Stage:** Historical topology and live source checks
+
+[Explore in Command Lab](https://huggingface.co/spaces/SZLHOLDINGS/szl-command-lab) · [Build](https://github.com/szl-holdings/szl-constellation) · [Evidence](https://github.com/szl-holdings/szl-constellation/blob/664b066fc0bc53f4c679aa46abc211a11639b69c/space/README.md)
+
+## Before you use it
+
+- Dated topology counts and render observations are not the current public inventory.
+- Source and content integrity do not establish availability, readiness or performance.
+
+<details>
+<summary>Technical details and original evidence</summary>
+
+The retained source below is exact and may contain historical observations. Its dates, use restrictions, licenses and evidence boundaries continue to apply.
+
+<!-- SZL-PRESERVED-TECHNICAL-BODY:START -->
+
 # SZL Constellation - the living archive
 
 49 estates, unarchived as light.
@@ -82,3 +104,7 @@ return 503; `GET /healthz` remains a basic process-health check.
 - Evidence boundary: verification proves integrity and declared origin, not availability, readiness, or performance.
 
 Doctrine v11 - nothing glows that did not earn it.
+
+<!-- SZL-PRESERVED-TECHNICAL-BODY:END -->
+
+</details>

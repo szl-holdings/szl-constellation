@@ -1,0 +1,53 @@
+{
+  "schema": "szl.source-card-presentation/v1",
+  "source_repository": "szl-holdings/szl-constellation",
+  "source_revision": "664b066fc0bc53f4c679aa46abc211a11639b69c",
+  "cards": [
+    {
+      "kind": "spaces",
+      "repo_id": "SZLHOLDINGS/szl-constellation",
+      "source_path": "space/README.md",
+      "source_url": "https://github.com/szl-holdings/szl-constellation/blob/664b066fc0bc53f4c679aa46abc211a11639b69c/space/README.md",
+      "observed_hub_revision": "ccf599654b3ef1df881b11c55b590c6dd99ae5af",
+      "observed_hub_card_sha256": "f796c78c8972c622f7b29dd620944de516ea82809996297fa6495a8c657c8d66",
+      "observed_at": "2026-10-04T16:11:15.078621+00:00",
+      "canonical_publisher": "https://github.com/szl-holdings/szl-constellation/blob/664b066fc0bc53f4c679aa46abc211a11639b69c/.github/workflows/publish-constellation-space.yml",
+      "publication_trigger": "PROTECTED_MAIN_PUSH",
+      "publication_state": "SOURCE_REVIEW_PENDING",
+      "artifact": "Portfolio visualization",
+      "stage": "Historical topology and live source checks",
+      "before_sha256": "f796c78c8972c622f7b29dd620944de516ea82809996297fa6495a8c657c8d66",
+      "after_sha256": "060b8f575535a1e429f43585094b673841e853bc7a7f51a2e292342da78107a9",
+      "front_matter_sha256": "2b1b54e875e4c0b18d378aebdc812d7c43f1a8a989a5e73699949d7eaf0e5ab9",
+      "preserved_body_sha256": "f6229e5525a14f651d6e84e42f2b57f83c1c9f538408a6c23dd50207362e6d4f",
+      "bytes_before": 3381,
+      "bytes_after": 4635,
+      "front_matter_preserved": true,
+      "original_body_preserved": true,
+      "provider_or_runtime_promotion": false
+    },
+    {
+      "kind": "datasets",
+      "repo_id": "SZLHOLDINGS/szl-estate-graph",
+      "source_path": "datasets/szl-estate-graph/README.md",
+      "source_url": "https://github.com/szl-holdings/szl-constellation/blob/664b066fc0bc53f4c679aa46abc211a11639b69c/datasets/szl-estate-graph/README.md",
+      "observed_hub_revision": "71933bcd9346d97a36a9f4745e0e79703e224516",
+      "observed_hub_card_sha256": "0d96de873325bbb4fc4ea8c618f559098cd00644409321d92d03997d1713db6c",
+      "observed_at": "2026-10-04T16:10:16.574141+00:00",
+      "canonical_publisher": null,
+      "publication_trigger": "UNRESOLVED_EXISTING_DATASET_ROUTE",
+      "publication_state": "SOURCE_REVIEW_ONLY_PUBLICATION_BLOCKED",
+      "artifact": "Graph publication bundle",
+      "stage": "Historical topology snapshot",
+      "before_sha256": "db95e4f0c1d26894d26e7c88dbea136c9713e6dc57f8e0526ebac37e25d0ec6a",
+      "after_sha256": "690fc41734796f731cdffc0aa439705d349de8f13770fd9576728808f45ed375",
+      "front_matter_sha256": "6d64a19de2068ecd1ac4d6e0caec87068c7a63b51827ef5d34cfeb3705857240",
+      "preserved_body_sha256": "849d6078d0597555764fd6057603d495404376d86fa83af50addfe45afbf1820",
+      "bytes_before": 858,
+      "bytes_after": 2131,
+      "front_matter_preserved": true,
+      "original_body_preserved": true,
+      "provider_or_runtime_promotion": false
+    }
+  ]
+}
