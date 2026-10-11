@@ -164,23 +164,25 @@ async def qualify(args):
         server = subprocess.Popen([args.runtime_python, str(Path(__file__).resolve()), "--serve", "--port", str(args.port)], cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT)
         try:
             ready = False
+            last_startup_error = None
             for _ in range(180):
                 if server.poll() is not None:
                     break
+                connection = HTTPConnection("127.0.0.1", args.port, timeout=1)
                 try:
-                    connection = HTTPConnection("127.0.0.1", args.port, timeout=1)
                     connection.request("GET", "/")
                     response = connection.getresponse()
                     response.read()
                     ready = response.status == 200
-                    connection.close()
                     if ready:
                         break
-                except OSError:
-                    pass
+                except OSError as error:
+                    last_startup_error = str(error)
+                finally:
+                    connection.close()
                 await asyncio.sleep(.25)
             if not ready:
-                raise RuntimeError("Actual local runtime did not start; inspect local-runtime.log")
+                raise RuntimeError(f"Actual local runtime did not start; inspect local-runtime.log; last socket error: {last_startup_error or 'none'}")
             async with async_playwright() as playwright:
                 launch = {"headless": True, "args": ["--disable-dev-shm-usage", "--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]}
                 if args.browser:

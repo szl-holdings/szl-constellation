@@ -149,12 +149,12 @@ function moveTrack(ev){
   tr.mesh.material.color.setHex(clsColor); tr.trail.material.color.setHex(clsColor);
   drawScope();
 }
-function addChainEvent(ev, verified){
+function addChainEvent(ev){
   const d = document.createElement('div');
-  d.className = 'ev new' + (verified===false ? ' bad' : '');
+  d.className = 'ev new';
   d.setAttribute('role', 'listitem');
   const c = ev.cls==='friendly' ? teal : ev.cls==='hostile-suspect' ? red : amber;
-  const dot=document.createElement('span'); dot.className='dot'; dot.style.background=verified===false?red:c; dot.setAttribute('aria-hidden','true');
+  const dot=document.createElement('span'); dot.className='dot'; dot.style.background=c; dot.setAttribute('aria-hidden','true');
   const label=document.createElement('span'); label.textContent=`#${ev.seq} ${ev.kind}`;
   const digest=document.createElement('span'); digest.className='h'; digest.textContent=ev.chain_hash.slice(0,10);
   d.append(dot,label,digest);
@@ -199,7 +199,7 @@ async function runScenario(){
     for(const ev of d.events){
       chain.push(ev);
       if(ev.kind==='spawn') spawnTrack(null, ev); else moveTrack(ev);
-      addChainEvent(ev, null); renderStats(null);
+      addChainEvent(ev); renderStats(null);
       if(!motionPaused()) await new Promise(r=>setTimeout(r, 380));
     }
     drawScope();
