@@ -240,14 +240,14 @@ async def qualify(args):
                             inspect_result(label, await page.evaluate(INSPECT_JS, {"forced": False}))
                             check(label + ": no script errors or operational writes", not errors and not writes, {"errors": errors, "writes": writes})
                             check(label + ": reduced-motion state", await page.evaluate("document.documentElement.dataset.motion === 'paused' && document.getAnimations().every(a => a.playState !== 'running')"))
-                            if path == "/panels/" and width == 320:
-                                await page.keyboard.press("Tab")
-                                check(label + ": skip link is first in keyboard navigation", await page.evaluate("document.activeElement.classList.contains('console-skip')"))
-                                await page.keyboard.press("Enter")
-                                check(label + ": skip link moves keyboard focus to the heading", await page.evaluate("document.activeElement.id === 'console-main'"))
                             if width in {320, 1280}:
                                 await page.screenshot(path=str(output / f"{name}-{width}-{theme}.png"), full_page=True)
                                 if path == "/panels/":
+                                    if width == 320:
+                                        await page.keyboard.press("Tab")
+                                        check(label + ": skip link is first in keyboard navigation", await page.evaluate("document.activeElement.classList.contains('console-skip')"))
+                                        await page.keyboard.press("Enter")
+                                        check(label + ": skip link moves keyboard focus to the heading", await page.evaluate("document.activeElement.id === 'console-main'"))
                                     labels = await page.evaluate("window.gradio_config.components.filter(c => c.type === 'tabitem').map(c => c.props.label)")
                                     for title in labels:
                                         tab = page.get_by_role("tab", name=title, exact=True)
