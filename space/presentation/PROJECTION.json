@@ -1,0 +1,17 @@
+{
+  "schema": "szl.native-presentation-projection/v1",
+  "source_repository": "szl-holdings/szl-brand",
+  "source_revision": "27d12e77fc0f9f1a0e5fae8b34adf2380d51d070",
+  "scope": "Exact KANCHAY1.3 tokens and native Orbit; local Constellation components, not the full shared CSS bundle",
+  "license": "CC-BY-4.0 artwork; Apache-2.0 code",
+  "files": {
+    "szl-tokens.css": {
+      "bytes": 9559,
+      "sha256": "81f7c9baeef0b435e6e3f9d0c4e0d70e40fa17df5d1f30697f623cd3ef5f8eab"
+    },
+    "szl-icon-32.svg": {
+      "bytes": 2969,
+      "sha256": "6e2b7d72a3af3d9602b79de41df0194ede6496a9661f057108ec224c0efc92e6"
+    }
+  }
+}
