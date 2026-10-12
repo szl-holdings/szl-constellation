@@ -1,0 +1,42 @@
+{
+  "schema": "szl.native-card-projection/v1",
+  "spdx_license_identifier": "Apache-2.0",
+  "copyright": "2026 Lutar, Stephen P. - SZL Holdings - ORCID 0009-0001-0110-4173",
+  "evidence_class": "UNSIGNED_SOURCE_PRESENTATION",
+  "source_repository": "szl-holdings/szl-constellation",
+  "base_revision": "aaf541a9ba66fc330fd3eba49a2df50f6b1c7fc7",
+  "source_path": "datasets/szl-estate-graph/README.md",
+  "repo_id": "SZLHOLDINGS/szl-estate-graph",
+  "before_sha256": "690fc41734796f731cdffc0aa439705d349de8f13770fd9576728808f45ed375",
+  "after_sha256": "210eb93ec8891b5352b967a1ea48898caa2729fa267040afe100a05701af9c2e",
+  "frontmatter_sha256": "6d64a19de2068ecd1ac4d6e0caec87068c7a63b51827ef5d34cfeb3705857240",
+  "preserved_technical_body_sha256": "0a667abd291b792e5d90b4b27b5a66e93325e0f22d9589292bad757937b2ba30",
+  "original_bytes_reconstructable": true,
+  "native_art": {
+    "repository": "szl-holdings/szl-brand",
+    "revision": "27d12e77fc0f9f1a0e5fae8b34adf2380d51d070",
+    "path": "kit/logos/orbit-v2/suite/szl-icon-32.svg",
+    "sha256": "6e2b7d72a3af3d9602b79de41df0194ede6496a9661f057108ec224c0efc92e6",
+    "render_width": 40,
+    "render_height": 40,
+    "license": "CC-BY-4.0",
+    "license_scope": "SZL artwork"
+  },
+  "publisher_changed": false,
+  "technical_body_changed": false,
+  "metadata_changed": false,
+  "technical_artifact_files_changed": false,
+  "model_loaded_or_evaluated": false,
+  "runtime_qualification": "UNCHANGED_NOT_EVALUATED",
+  "provider_publication": "NOT_ESTABLISHED_BY_THIS_SOURCE_RECORD",
+  "prior_public_readback": {
+    "revision": "71933bcd9346d97a36a9f4745e0e79703e224516",
+    "readme_sha256": "0d96de873325bbb4fc4ea8c618f559098cd00644409321d92d03997d1713db6c",
+    "observed_at": "2026-10-11T13:18:50.881838+00:00",
+    "matches_base_source_card": false
+  },
+  "canonical_publisher": null,
+  "publication_hold": "The existing source presentation record marks the dataset route UNRESOLVED_EXISTING_DATASET_ROUTE and SOURCE_REVIEW_ONLY_PUBLICATION_BLOCKED. This historical source card is not byte-identical to the current Hub card; no active Hub card-body writer or source parity is claimed.",
+  "historical_source_only": true,
+  "live_card_parity_established": false
+}
