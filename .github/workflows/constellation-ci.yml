@@ -69,6 +69,35 @@ jobs:
           HF_HUB_DISABLE_TELEMETRY: "1"
         run: python -m pytest -q -p no:cacheprovider tools/tests
 
+      - name: Check synthetic controller state without network or a provider
+        run: node --test space/tests/test_presentation_controller.cjs
+
+      - name: Install isolated rendered-qualification tools
+        run: |
+          python -m venv "$RUNNER_TEMP/constellation-browser"
+          "$RUNNER_TEMP/constellation-browser/bin/python" -m pip install --disable-pip-version-check --no-cache-dir playwright==1.60.0
+          "$RUNNER_TEMP/constellation-browser/bin/python" -m playwright install --with-deps chromium
+          npm install --prefix "$RUNNER_TEMP/constellation-three" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund three@0.160.0
+
+      - name: Render four actual fronts with local unavailable and synthetic fixtures
+        env:
+          SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+          GRADIO_ANALYTICS_ENABLED: "False"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          "$RUNNER_TEMP/constellation-browser/bin/python" tools/verify_constellation_browser.py \
+            --runtime-python "$(command -v python)" \
+            --three-root "$RUNNER_TEMP/constellation-three/node_modules/three" \
+            --out "$RUNNER_TEMP/constellation-native-observations"
+
+      - name: Retain unsigned rendered observations
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: constellation-native-frontend-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/constellation-native-observations
+          if-no-files-found: warn
+
       - name: Prove environment and tree are clean
         run: |
           python -m pip check

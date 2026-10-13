@@ -1,47 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SZL Shader Fabric — Estate Hologram v1.1</title>
-<meta name="description" content="SZL Constellation holographic estate field. Nothing glows that didn't earn it.">
-<style>
-  :root { --bg: #05070a; --teal: #59ccc1; --dim: #40514e; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; background: var(--bg); overflow: hidden;
-    font-family: ui-monospace, 'Cascadia Code', monospace; }
-  #fabric { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  header { position: fixed; top: 1.25rem; left: 1.5rem; color: var(--teal);
-    font-size: 0.75rem; letter-spacing: 0.35em; text-transform: uppercase;
-    text-shadow: 0 0 12px rgba(89,204,193,0.6); z-index: 2; }
-  footer { position: fixed; bottom: 1.25rem; left: 1.5rem; color: var(--dim);
-    font-size: 0.65rem; letter-spacing: 0.2em; z-index: 2; }
-  #hud { position: fixed; top: 1.25rem; right: 1.5rem; text-align: right;
-    color: var(--dim); font-size: 0.65rem; line-height: 1.9; z-index: 2;
-    letter-spacing: 0.15em; }
-  #hud b { color: var(--teal); font-weight: normal; }
-</style>
-</head>
-<body>
-<canvas id="fabric" width="1280" height="800"></canvas>
-<header>SZL Constellation &mdash; Estate Hologram</header>
-<div id="hud">
-  estates <b id="count">&mdash;</b><br>
-  dropped <b id="dropped">0</b> (fail-closed)<br>
-  doctrine <b>v11</b>
-</div>
-<footer>nothing glows that didn&rsquo;t earn it.</footer>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SZL Constellation · Shader fabric</title><meta name="description" content="A visual rendering of the bundled SZL estate and its declared evidence states.">
+<link rel="icon" href="/assets/szl/szl-icon-32.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/szl/szl-tokens.css">
+<link rel="stylesheet" href="/assets/szl/native.css">
+<script src="/assets/szl/native.js" defer></script>
+</head><body class="native-page fabric-page">
+<a class="native-skip" href="#fabric-main">Skip to main content</a>
+<header class="native-header"><div class="native-brand"><a class="native-mark" href="https://huggingface.co/SZLHOLDINGS" aria-label="SZL Holdings on Hugging Face"><img src="/assets/szl/szl-icon-32.svg" alt="SZL Holdings" width="40" height="40"></a><div><strong>CONSTELLATION</strong><small>SZL Holdings · source and evidence</small></div></div><nav class="native-nav" id="native-nav" aria-label="Constellation navigation"><a href="/">Estate map</a><a href="/panels">Consoles</a><a href="/c2">C2 reference</a><a href="/fabric" aria-current="page">Shader fabric</a><button type="button" data-theme-toggle>Light theme</button><button type="button" data-motion-toggle aria-pressed="false">Pause motion</button></nav></header>
+<main class="native-main" id="fabric-main" tabindex="-1"><section class="native-intro"><p class="native-eyebrow">Shader fabric v1.1 · source visualization</p><h1>The estate field</h1><p>A retained shader view of the bundled topology. Brightness follows the record's declared evidence state; animation is not a live service or qualification signal.</p></section><section class="native-stage" aria-label="Estate shader field"><canvas id="fabric" width="1280" height="800" aria-label="Visual estate field; the linked estate directory provides text navigation"></canvas><div id="hud">rendered estates <b id="count">—</b><br>dropped entries <b id="dropped">—</b><br>doctrine <b>v11</b></div></section><p id="fabric-message" class="native-fabric-status" role="status">Loading the bundled estate field…</p><p><a href="/#directory">Explore the text estate directory</a> · Nothing glows that did not earn it.</p></main>
+<footer class="native-footer"><p>Source integrity, operational readiness and authority are separate claims. Each surface retains its evidence boundaries.</p><p><a href="https://github.com/szl-holdings/szl-constellation">Canonical source</a> · <a href="/assets/szl/PROJECTION.json">Presentation source</a> · SZL Orbit <a href="https://github.com/szl-holdings/szl-brand/blob/27d12e77fc0f9f1a0e5fae8b34adf2380d51d070/kit/LICENSE">CC BY 4.0</a></p></footer>
 <script type="module">
-import SzlShaderFabric from './szl-shader-fabric.js';
 const canvas = document.getElementById('fabric');
-const fabric = await SzlShaderFabric.fromEstateJson(canvas, '../estates.json');
-if (fabric.staticFallback) {
-  document.getElementById('count').textContent = 'STATIC';
-} else {
-  document.getElementById('count').textContent = fabric.estates.length;
-  document.getElementById('dropped').textContent = fabric.dropped || 0;
-  fabric.start();
+const message = document.getElementById('fabric-message');
+try {
+  const {default: SzlShaderFabric} = await import('./szl-shader-fabric.js');
+  const fabric = await SzlShaderFabric.fromEstateJson(canvas, '../estates.json');
+  if (fabric.staticFallback) {
+    document.getElementById('count').textContent = 'STATIC';
+    message.textContent = 'STATIC FALLBACK — WebGL is unavailable. No rendered estate count or live service status is inferred; use the text directory.';
+  } else if (!fabric.prog) {
+    message.textContent = 'SHADER UNAVAILABLE — the shader program could not initialize. The text directory remains available.';
+  } else {
+    if (fabric.estates.length) {
+      document.getElementById('count').textContent = fabric.estates.length;
+      document.getElementById('dropped').textContent = fabric.dropped;
+      message.textContent = 'The field renders the bundled source declarations. Unknown evidence remains dim; animation does not establish current readiness.';
+    } else {
+      message.textContent = 'EMPTY OR UNAVAILABLE FIELD — no estates were rendered. The retained loader does not distinguish an empty manifest from a failed read; no organization count is inferred.';
+    }
+    let pendingFrame = null;
+    function syncMotion(){
+      fabric.stop();
+      if(pendingFrame !== null) cancelAnimationFrame(pendingFrame);
+      pendingFrame = requestAnimationFrame(()=>{
+        pendingFrame=null;
+        if(document.hidden) return;
+        fabric.start();
+        if(document.documentElement.dataset.motion==='paused') requestAnimationFrame(()=>fabric.stop());
+      });
+    }
+    document.addEventListener('szl:motion-change', syncMotion);
+    document.addEventListener('visibilitychange', syncMotion);
+    new ResizeObserver(syncMotion).observe(canvas);
+    syncMotion();
+  }
+} catch {
+  message.textContent = 'FABRIC UNAVAILABLE — the renderer or bundled source could not initialize. No estate count or runtime qualification is inferred.';
 }
 </script>
-</body>
-</html>
+</body></html>

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from crosscheck import crosscheck_chains
+from presentation import ASSETS as PRESENTATION_ASSETS, read_asset
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 GENESIS = "0" * 64
@@ -925,20 +926,52 @@ def trust_path(a, b):
 
 # ---------- consoles ----------
 
-CSS = """
-body,.gradio-container{background:#070b12!important;color:#e6edfb!important}
-.gradio-container{max-width:1080px!important}
-.wire{background:rgba(255,255,255,.028);border:1px solid rgba(140,170,220,.14);border-radius:14px;padding:16px 18px;margin:10px 0;font-size:13px;color:#9fb0cf;border-left:3px solid var(--accent,#3af4c8)}
-.wire h4{margin:0 0 10px;font-size:13.5px;color:var(--accent,#e6edfb)}
-.wire .motif{font:600 10.5px ui-monospace,monospace;color:var(--accent,#6b7a99);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
-.wire .row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.wire .tag{font:600 10.5px ui-monospace,monospace;color:#5b8dee;background:rgba(91,141,238,.09);border:1px solid rgba(91,141,238,.25);border-radius:6px;padding:3px 8px;text-decoration:none}
-.wire .tag.k{color:#3af4c8;background:rgba(58,244,200,.08);border-color:rgba(58,244,200,.28)}
-.wire .tag.m{color:#8a6bff;background:rgba(138,107,255,.09);border-color:rgba(138,107,255,.28)}
-.wire .tag.d{color:#d4a444;background:rgba(212,164,68,.08);border-color:rgba(212,164,68,.28)}
-.wire .lbl{font:700 9.5px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#6b7a99;width:74px;padding-top:4px;flex:none}
-.backbar{font:600 12px ui-monospace,monospace;margin:10px 0 18px}
-.backbar a{color:#3af4c8;text-decoration:none}
+CSS = (Path(HERE) / "presentation" / "szl-tokens.css").read_text(encoding="utf-8") + """
+body,.gradio-container{background:var(--bg)!important;color:var(--text)!important;font-family:var(--font-body)!important}
+.gradio-container{width:100%!important;max-width:1280px!important;padding:24px!important;--body-background-fill:var(--bg);--body-text-color:var(--text);--body-text-color-subdued:var(--text-sub);--block-background-fill:var(--surface);--block-border-color:var(--border);--block-label-text-color:var(--text-sub);--block-label-background-fill:var(--surface);--block-title-text-color:var(--text);--input-background-fill:var(--surface);--input-border-color:var(--control-edge);--input-text-color:var(--text);--button-primary-background-fill:var(--action-bg);--button-primary-background-fill-hover:var(--action-hover-bg);--button-primary-text-color:var(--action-ink);--button-secondary-background-fill:var(--surface);--button-secondary-text-color:var(--text);--button-secondary-border-color:var(--control-edge)}
+.gradio-container :is(a,button,input,textarea,select,[tabindex]):focus-visible{outline:3px solid var(--focus)!important;outline-offset:3px!important}
+.gradio-container.gradio-container{padding:clamp(16px,2vw,24px)!important}
+.gradio-container>.main{width:100%!important;padding:0!important}
+.gradio-container .html-container{padding:0!important}
+.console-skip{position:fixed;top:-100px;left:16px;z-index:100;padding:12px 18px;background:var(--surface);color:var(--link);border:1px solid var(--control-edge);border-radius:10px}
+.console-skip:focus{top:12px}
+.gradio-container button{min-width:44px!important}
+.gradio-container button,.gradio-container input:not([type=range]),.gradio-container select{min-height:44px!important}
+.gradio-container button.primary{color:var(--action-ink)!important;background:var(--action-bg)!important}
+.gradio-container button.primary:hover{color:var(--action-ink)!important;background:var(--action-hover-bg)!important}
+.gradio-container button.primary:active{color:var(--action-ink)!important;background:var(--action-press-bg)!important}
+.gradio-container .tab-wrapper{height:auto!important;min-height:58px!important;padding-bottom:0!important;align-items:stretch!important}
+.gradio-container .tab-container{height:58px!important;align-items:stretch!important}
+.gradio-container .tab-container button{min-width:44px;flex-shrink:0!important;color:var(--text-sub)!important;font-size:14px!important;line-height:1.5!important}
+.gradio-container button[role=tab][aria-selected=true]{color:var(--text)!important;border-bottom:2px solid var(--holo-teal)!important}
+.gradio-container [role=tablist]{display:flex!important;flex-wrap:nowrap!important;gap:0!important;overflow:hidden!important;border-bottom:1px solid var(--border)!important;padding-bottom:0!important}
+.gradio-container [role=tabpanel]{min-width:0!important;padding-top:20px!important}
+.gradio-container input,.gradio-container textarea{font-size:16px!important;min-height:44px!important}
+.gradio-container button[aria-label="More tabs"]{min-width:44px!important;min-height:44px!important;color:var(--text)!important;background:var(--surface)!important;border:1px solid var(--control-edge)!important}
+.gradio-container .overflow-dropdown{background:var(--surface)!important;border:1px solid var(--control-edge)!important;max-height:min(65vh,640px);overflow-y:auto!important;overscroll-behavior:contain}
+.gradio-container .overflow-dropdown button{color:var(--text)!important;background:var(--surface)!important;text-align:left}
+.gradio-container .overflow-dropdown button:hover,.gradio-container .overflow-dropdown .overflow-item-selected{color:var(--text)!important;background:var(--surface-raised)!important}
+.gradio-container .overflow-dropdown .overflow-item-selected{box-shadow:inset 3px 0 var(--holo-teal)}
+.wire{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin:10px 0 24px;font-size:14px;color:var(--text-sub);border-left:3px solid var(--accent,var(--holo-teal));overflow-wrap:anywhere}
+.wire h4{margin:0 0 12px;font-size:20px;line-height:1.4;color:var(--text)!important}
+.wire h4 span,.wire .motif,.wire>div:last-child{color:var(--text-sub)!important}
+.wire .motif{font:600 12px/1.6 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.wire .row{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.wire .tag{display:inline-flex;align-items:center;min-height:44px;max-width:100%;font:500 13px/1.5 var(--font-mono);color:var(--link)!important;background:var(--surface-raised);border:1px solid var(--control-edge);border-radius:9px;padding:9px 12px;text-decoration:none;overflow-wrap:anywhere}
+.wire .tag:hover{color:var(--link-hover)!important;border-color:var(--holo-teal)}
+.wire .lbl{font:600 11px/1.5 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--text-sub);width:74px;padding-top:12px;flex:none}
+.console-identity{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border);padding-bottom:20px;margin-bottom:20px}
+.console-identity img{display:block;width:40px;height:40px}
+.console-identity strong{font-size:16px;color:var(--text)}
+.console-identity small{display:block;color:var(--text-sub);font-size:12px;margin-top:4px}
+.console-title{font:650 clamp(32px,5vw,54px)/1.12 var(--font-heading)!important;letter-spacing:-.03em;margin:28px 0 16px!important;color:var(--text)!important}
+.console-description{max-width:80ch;color:var(--text-sub);font-size:16px;line-height:1.7;margin:0 0 28px}
+.backbar{display:flex;flex-wrap:wrap;gap:8px;font:600 14px/1.5 var(--font-body);margin:12px 0 20px}
+.backbar a,.backbar button{display:inline-flex;align-items:center;min-height:44px;border:1px solid var(--control-edge);border-radius:10px;padding:9px 14px;color:var(--link)!important;text-decoration:none;background:var(--surface);font:inherit;cursor:pointer}
+html[data-motion=paused] .gradio-container *,html[data-motion=paused] .gradio-container *::before,html[data-motion=paused] .gradio-container *::after{animation:none!important;transition:none!important}
+@media(max-width:640px){.gradio-container{padding:16px!important}.wire{padding:18px}.wire .lbl{width:100%;padding-top:0}.gradio-container .tab-container button{font-size:12px!important;padding:8px 10px!important}}
+@media(prefers-reduced-motion:reduce){.gradio-container *,.gradio-container *::before,.gradio-container *::after{animation:none!important;transition:none!important}}
+@media(forced-colors:active){body,.gradio-container,.wire,.wire .tag,.backbar a{background:Canvas!important;color:CanvasText!important;border-color:CanvasText!important}.gradio-container a{color:LinkText!important}.gradio-container :is(a,button,input,textarea,select,[tabindex]):focus-visible{outline-color:Highlight!important}}
 """
 
 def wire_html(v):
@@ -968,12 +1001,11 @@ def family_html(f):
 
 def build_consoles():
     import gradio as gr
-    with gr.Blocks(title="SZL Constellation - Consoles", css=A11OY_HOLO_CSS, head=A11OY_HOLO_HEAD) as demo:
-        gr.HTML("""<div class="backbar"><a href="/">&larr; back to the constellation</a> &middot;
-        <a href="/c2" target="_blank">C2 operating picture</a> &middot;
-        <a href="/api/constellation/manifest" target="_blank">api</a></div>
-        <h2 style="margin:0 0 4px">Vertical <span style="color:#3af4c8">Consoles</span></h2>
-        <div style="color:#6b7a99;font-size:12.5px;margin-bottom:10px">Every console probes live at request time and reports UNAVAILABLE rather than fabricate. Each vertical wears its own identity per the design system.</div>""")
+    with gr.Blocks(title="SZL Constellation - Consoles", fill_width=True) as demo:
+        gr.HTML("""<a class="console-skip" href="#console-main">Skip to main content</a><div class="console-identity"><img src="/assets/szl/szl-icon-32.svg" alt="SZL Holdings" width="40" height="40"><div><strong>CONSTELLATION</strong><small>SZL Holdings · source and evidence</small></div></div>
+        <nav class="backbar" aria-label="Constellation navigation"><a href="/">Estate map</a><a href="/c2">C2 reference</a><a href="/fabric">Shader fabric</a><a href="/api/constellation/manifest">Declared manifest</a><button type="button" data-theme-toggle>Light theme</button><button type="button" data-motion-toggle aria-pressed="false">Pause motion</button></nav>
+        <h1 class="console-title" id="console-main" tabindex="-1">Vertical consoles</h1>
+        <p class="console-description">Inspect a vertical, then choose its explicit probe or local computation. Every console probes live at request time and reports UNAVAILABLE rather than fabricate. Reachability, source integrity and action approval remain separate claims.</p>""")
         with gr.Tabs():
             with gr.Tab("SZL Foundry"):
                 f = FAMILIES.get("szl-foundry")
@@ -1109,9 +1141,23 @@ Reachability is not verification. Open the canonical verifier to check a receipt
 def create_app():
     import gradio as gr
     from fastapi import FastAPI, Request
-    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+    from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
     app = FastAPI(title="SZL Constellation")
+
+    # Every presentation URL selects one literal bounded file. This never
+    # exposes the source tree, receipt files or a user-controlled path.
+    def presentation_route(route):
+        def asset():
+            try:
+                data, content_type = read_asset(route)
+            except OSError:
+                return Response("Presentation asset unavailable", status_code=503, media_type="text/plain")
+            return Response(data, headers={"Content-Type": content_type, "X-Content-Type-Options": "nosniff"})
+        return asset
+
+    for route in PRESENTATION_ASSETS:
+        app.add_api_route(route, presentation_route(route), methods=["GET"], include_in_schema=False)
 
     # Only public manifests are assets; never expose the repository root.
     @app.get("/static/estates.json", include_in_schema=False)
@@ -1281,7 +1327,8 @@ def create_app():
         demo = build_consoles()
         # HF enables SSR by default. A mounted sub-app must not compete with
         # the root Uvicorn process for port 7860.
-        app = gr.mount_gradio_app(app, demo, path="/panels", css=CSS, ssr_mode=False)
+        app = gr.mount_gradio_app(app, demo, path="/panels", css=CSS,
+                                  head='<script src="/assets/szl/native.js" defer></script>', ssr_mode=False)
     except Exception as exc:
         panels_error = type(exc).__name__
 

@@ -48,25 +48,27 @@
   #fallback .box{max-width:540px;border:1px solid rgba(212,164,68,.4);border-radius:14px;padding:28px;color:#d4a444;font-size:14px;line-height:1.75;background:rgba(212,164,68,.06)}
   @media (max-width:720px){ #legend{display:none} #controls{max-width:88vw} #stats{display:none} #pathbar{max-width:80vw} }
 </style>
+<link rel="icon" href="/assets/szl/szl-icon-32.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/szl/szl-tokens.css">
+<link rel="stylesheet" href="/assets/szl/native.css">
+<script src="/assets/szl/native.js" defer></script>
 </head>
-<body>
-<div id="scene"></div>
-<div class="vignette"></div>
-<div id="boot"><div class="sig">Synapse Ignition</div><div class="big">SZL CONSTELLATION</div><div class="sub" id="bootmsg">waking the estates…</div></div>
-<div id="hud-top"><div class="k">SZL Holdings · Living Archive</div><div class="t">The <span>Constellation</span></div></div>
-<div id="nav"><a href="/panels">Consoles</a><a href="/api/constellation/manifest" target="_blank" rel="noopener">API</a></div>
-<div id="stats"></div>
-<div id="pathbar"></div>
-<div id="legend">
-  <div><span class="dot" style="background:#3af4c8;box-shadow:0 0 8px #3af4c8"></span>REACHABLE — pinged live from your browser</div>
-  <div><span class="dot" style="background:#5b8dee"></span>DECLARED — manifest fact from the consolidation receipt</div>
-  <div><span class="dot" style="background:#d4a444"></span>TRUST PATH — computed by BFS over the wiring graph, receipted</div>
-</div>
-<div id="controls"></div>
-<div id="tip"></div>
-<div id="panel"><button class="close">✕</button><div id="panel-body"></div></div>
-<div id="fallback"><div class="box"><b>HOLOGRAM UNAVAILABLE.</b><br>The WebGL renderer or the three.js CDN could not be reached from this browser. The constellation is not faked — when it cannot render, it says so. The consoles at <a href="/panels" style="color:#d4a444">/panels</a> and the API at <a href="/api/constellation/manifest" style="color:#d4a444">/api</a> still compute.</div></div>
-
+<body class="native-page constellation-page">
+<a class="native-skip" href="#directory">Skip to main content</a>
+<header class="native-header"><div class="native-brand"><a class="native-mark" href="https://huggingface.co/SZLHOLDINGS" aria-label="SZL Holdings on Hugging Face"><img src="/assets/szl/szl-icon-32.svg" alt="SZL Holdings" width="40" height="40"></a><div><strong>CONSTELLATION</strong><small>SZL Holdings · source and evidence</small></div></div><nav class="native-nav" id="native-nav" aria-label="Constellation navigation"><a href="/" aria-current="page">Estate map</a><a href="/panels">Consoles</a><a href="/c2">C2 reference</a><a href="/fabric">Shader fabric</a><button type="button" data-theme-toggle>Light theme</button><button type="button" data-motion-toggle aria-pressed="false">Pause motion</button></nav></header>
+<main class="native-main">
+<section class="native-intro" aria-labelledby="map-title"><p class="native-eyebrow">Historical topology · current source checks</p><h1 id="map-title">SZL Constellation</h1><p>Explore the declared relationships across the SZL estate. The visual field and the searchable directory share the bundled topology; its dated counts are not a current public inventory.</p></section>
+<section class="native-stage" aria-label="Interactive estate visualization">
+<div id="scene" aria-label="Visual estate field; use the searchable directory below for text navigation"></div><div class="vignette" aria-hidden="true"></div>
+<div id="boot" role="status"><div class="sig">Source visualization</div><div class="big">SZL CONSTELLATION</div><div class="sub" id="bootmsg">Loading the estate field…</div></div>
+<div id="stats">Source counts pending renderer startup.</div><div id="pathbar" role="status"></div><div id="controls" aria-label="Visual field controls"></div>
+<div id="fallback" role="status"><div class="box"><b>HOLOGRAM UNAVAILABLE.</b><p>The WebGL renderer or its pinned library could not be loaded. The text directory below reads the bundled manifest independently.</p><a href="#directory">Explore the estate directory</a> · <a href="/panels">Open consoles</a></div></div>
+</section>
+<div id="legend" aria-label="Visual evidence legend"><div><b>RESPONSE RECEIVED</b>An endpoint request resolved. An opaque response does not establish its status, readiness or verification.</div><div><b>DECLARED TOPOLOGY</b>Relationships come from the bundled consolidation record. They are source declarations.</div><div><b>TRUST PATH</b>The path API computes a route over that declared graph. Its receipt does not grant action authority.</div></div>
+<section id="directory" class="native-directory" tabindex="-1" aria-labelledby="directory-title"><div class="native-section-heading"><div><h2 id="directory-title">Explore the declared estate</h2><p>A text view of the source-listed projects, available independently of WebGL. Search a name, tier or description.</p></div><label class="native-search" for="estate-search">Filter estates<input id="estate-search" type="search" placeholder="Search the bundled topology" autocomplete="off"></label></div><p id="directory-status" class="native-directory-status" role="status">Loading the bundled estate manifest…</p><div id="native-estates" class="native-estates"></div></section>
+</main>
+<div id="tip" role="tooltip"></div><section id="panel" role="region" aria-label="Selected estate details" aria-hidden="true" inert><button class="close" type="button" aria-label="Close estate details">×</button><div id="panel-body"></div></section>
+<footer class="native-footer"><p>Source integrity, operational readiness and authority are separate claims. Each surface retains its evidence boundaries.</p><p><a href="https://github.com/szl-holdings/szl-constellation">Canonical source</a> · <a href="/assets/szl/PROJECTION.json">Presentation source</a> · SZL Orbit <a href="https://github.com/szl-holdings/szl-brand/blob/27d12e77fc0f9f1a0e5fae8b34adf2380d51d070/kit/LICENSE">CC BY 4.0</a></p></footer>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 function showFallback(title, detail){
@@ -116,17 +118,19 @@ async function boot(){
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x020409, 0.0085);
-  const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, .1, 600);
+  const stage = document.getElementById('scene');
+  const motionPaused = () => document.documentElement.dataset.motion === 'paused' || document.hidden;
+  const camera = new THREE.PerspectiveCamera(55, stage.clientWidth/stage.clientHeight, .1, 600);
   camera.position.set(0, 15, 56);
   const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:'high-performance'});
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(stage.clientWidth, stage.clientHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
-  document.getElementById('scene').appendChild(renderer.domElement);
+  stage.appendChild(renderer.domElement);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.05, 0.55, 0.12));
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(stage.clientWidth, stage.clientHeight), 1.05, 0.55, 0.12));
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = .06;
   controls.autoRotate = true; controls.autoRotateSpeed = .45;
@@ -318,7 +322,7 @@ async function boot(){
   rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos,3));
   scene.add(new THREE.Points(rainGeo, new THREE.PointsMaterial({size:.95, map:starTex, color:0x3af4c8, transparent:true, opacity:.5, depthWrite:false, blending:THREE.AdditiveBlending})));
 
-  // ---- honest live pings ----
+  // Opaque requests expose no HTTP status, readiness or verification result.
   const statsEl = document.getElementById('stats');
   let reachable = 0, probed = 0, totalProbe = 0;
   ESTATES.forEach(e => totalProbe += (e.live||[]).length);
@@ -331,8 +335,8 @@ async function boot(){
       .finally(()=>{ clearTimeout(to); probed++; renderStats(); });
   }
   function markReachable(obj){
-    if(obj.userData.state==='REACHABLE') return;
-    obj.userData.state='REACHABLE'; reachable++;
+    if(obj.userData.state==='RESPONSE RECEIVED') return;
+    obj.userData.state='RESPONSE RECEIVED'; reachable++;
     obj.userData.halo.material.opacity=.85;
     obj.userData.halo.scale.multiplyScalar(1.7);
     obj.material.opacity = 1;
@@ -341,16 +345,17 @@ async function boot(){
   latticeOrbs.forEach(o=>ping(o.userData.satellite.url, ()=>markReachable(o)));
   function renderStats(){
     statsEl.innerHTML = `<b>${ESTATES.length}</b> estates · <b>${LATTICE.length}</b> satellites · <b>${VERTICALS.length}</b> verticals<br>`+
-      `<b>${reachable}</b> reachable now · ${probed}/${totalProbe} probed<br>`+
-      `<span style="color:#d4a444">ouroboros RUNNING · ${pulses.length} synapses · kernel rain FALLING</span>`;
+      `<b>${reachable}</b> nodes received an opaque response · ${probed}/${totalProbe} requests finished<br>`+
+      `<span style="color:#e4cf99">${pulses.length} illustrated threads · animation is not runtime status</span>`;
   }
   renderStats();
 
   // ---- camera fly-to ----
   const HOME = {pos:new THREE.Vector3(0,15,56), tgt:new THREE.Vector3(0,0,0)};
   let camGoal = null, tgtGoal = null;
-  function flyTo(pos, offset=9){ camGoal = pos.clone().add(new THREE.Vector3(offset*.55, offset*.45, offset)); tgtGoal = pos.clone(); }
-  function flyHome(){ camGoal = HOME.pos.clone(); tgtGoal = HOME.tgt.clone(); }
+  function flyTo(pos, offset=9){ camGoal = pos.clone().add(new THREE.Vector3(offset*.55, offset*.45, offset)); tgtGoal = pos.clone(); if(motionPaused()) settleCamera(); }
+  function flyHome(){ camGoal = HOME.pos.clone(); tgtGoal = HOME.tgt.clone(); if(motionPaused()) settleCamera(); }
+  function settleCamera(){ if(camGoal && tgtGoal){ camera.position.copy(camGoal); controls.target.copy(tgtGoal); camGoal=null; tgtGoal=null; controls.update(); composer.render(); } }
 
   // ---- trust-path mode ----
   const pathbar = document.getElementById('pathbar');
@@ -382,7 +387,8 @@ async function boot(){
       pathPulses.push({pulse:p, curve, t:i/4});
     }
     d.path.forEach(n=>{ const o = orbs.find(x=>x.userData.estate.name===n); if(o) o.userData.halo.material.color.setHex(0xffd97a); });
-    pathbar.innerHTML = `⚡ TRUST PATH · ${d.hops} hops · receipt ${d.receipt.sha256.slice(0,12)}…<br><span style="color:#e6edfb">${d.path.join(' → ')}</span>`;
+    pathbar.textContent = `TRUST PATH · ${d.hops} hops · receipt ${d.receipt.sha256.slice(0,12)}… · ${d.path.join(' → ')}`;
+    composer.render();
   }
 
   // ---- controls ----
@@ -391,8 +397,8 @@ async function boot(){
   function applySpotlight(){
     orbs.forEach(o=>{
       const dim = spotlight && o.userData.tier!==spotlight;
-      o.material.opacity = dim ? .1 : (o.userData.state==='REACHABLE'?1:.88);
-      if(o.userData.state!=='REACHABLE') o.userData.halo.material.opacity = dim ? .04 : .3;
+      o.material.opacity = dim ? .1 : (o.userData.state==='RESPONSE RECEIVED'?1:.88);
+      if(o.userData.state!=='RESPONSE RECEIVED') o.userData.halo.material.opacity = dim ? .04 : .3;
     });
     Object.entries(territoryMats).forEach(([t,m])=>{
       const active = !spotlight || t===spotlight;
@@ -402,21 +408,25 @@ async function boot(){
     threads.forEach(t=>{ t.line.material.opacity = spotlight ? .05 : .18; });
     vertThreads.forEach(t=>{ t.line.material.opacity = spotlight ? .3 : 0; });
     pulses.forEach(p=>{ if(p.kind==='vertical') p.pulse.material.opacity = spotlight ? .8 : 0; });
+    composer.render();
   }
   [...tiers, null].forEach(t=>{
     const b = document.createElement('button');
     b.textContent = t ? t : 'All';
     b.className = t ? 'dim' : '';
-    b.onclick = ()=>{ spotlight = t; applySpotlight(); };
+    b.type = 'button'; b.dataset.tierFilter = t || 'all'; b.setAttribute('aria-pressed', String(!t));
+    b.onclick = ()=>{ spotlight = t; ctrl.querySelectorAll('[data-tier-filter]').forEach(item=>item.setAttribute('aria-pressed', String(item===b))); applySpotlight(); };
     ctrl.appendChild(b);
   });
   const pathBtn = document.createElement('button');
   pathBtn.textContent = '⇄ Path';
   pathBtn.className = 'dim';
-  pathBtn.onclick = ()=>{ pathMode = !pathMode; pathBtn.className = pathMode ? 'active' : 'dim'; if(!pathMode) clearPath(); };
+  pathBtn.type = 'button'; pathBtn.setAttribute('aria-pressed', 'false');
+  pathBtn.onclick = ()=>{ pathMode = !pathMode; pathBtn.className = pathMode ? 'active' : 'dim'; pathBtn.setAttribute('aria-pressed', String(pathMode)); if(!pathMode) clearPath(); composer.render(); };
   ctrl.appendChild(pathBtn);
   const stormBtn = document.createElement('button');
-  stormBtn.textContent = '⚡ Storm';
+  stormBtn.textContent = 'Animate pulse';
+  stormBtn.type = 'button'; stormBtn.dataset.motionEffect = ''; stormBtn.disabled = motionPaused();
   stormBtn.onclick = ()=>{ storm = 1; };
   ctrl.appendChild(stormBtn);
 
@@ -424,8 +434,14 @@ async function boot(){
   const ray = new THREE.Raycaster(); const mouse = new THREE.Vector2();
   const tip = document.getElementById('tip');
   const panel = document.getElementById('panel'); const panelBody = document.getElementById('panel-body');
+  function pointerOnStage(ev){
+    const bounds = stage.getBoundingClientRect();
+    if(ev.clientX < bounds.left || ev.clientX > bounds.right || ev.clientY < bounds.top || ev.clientY > bounds.bottom || ev.target.closest('#panel,#controls,.native-header,.native-directory,a,button,input,summary')) return false;
+    mouse.set((ev.clientX-bounds.left)/bounds.width*2-1, -(ev.clientY-bounds.top)/bounds.height*2+1);
+    return true;
+  }
   addEventListener('pointermove', ev=>{
-    mouse.set(ev.clientX/innerWidth*2-1, -(ev.clientY/innerHeight)*2+1);
+    if(!pointerOnStage(ev)){ tip.style.display='none'; document.body.style.cursor='default'; return; }
     ray.setFromCamera(mouse, camera);
     const hit = ray.intersectObjects(pickables)[0];
     if(hit){
@@ -436,7 +452,7 @@ async function boot(){
     } else { tip.style.display='none'; document.body.style.cursor='default'; }
   });
   addEventListener('click', ev=>{
-    if(ev.target.closest('#panel')||ev.target.closest('#controls')||ev.target.closest('#nav')) return;
+    if(!pointerOnStage(ev)) return;
     ray.setFromCamera(mouse, camera);
     const hit = ray.intersectObjects(pickables)[0];
     if(pathMode){
@@ -455,7 +471,7 @@ async function boot(){
     }
     if(!hit){ panel.classList.remove('open'); flyHome(); vertThreads.forEach(t=>t.line.material.opacity = spotlight?.3:0); return; }
     const u = hit.object.userData;
-    const stateColor = u.state==='REACHABLE' ? '#3af4c8' : (u.state==='DECLARED' ? '#5b8dee' : '#6b7a99');
+    const stateColor = u.state==='RESPONSE RECEIVED' ? '#8fd9d5' : '#aab7c9';
     if(u.estate){
       const e = u.estate;
       const hub = HUBS[e.hub];
@@ -466,7 +482,7 @@ async function boot(){
         <h2>${e.name}</h2>
         <div class="files">${e.release?`${e.files} files at release source ${e.release.source_revision.slice(0,12)}`:`${e.files} files · unarchived${vOf?` · wired to <b style="color:#64d97a">${vOf.name}</b>`:''}`}</div>
         <div class="desc">${e.desc}</div>
-        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='REACHABLE'?' — answered a live ping':''}</div>
+        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='RESPONSE RECEIVED'?' — opaque response; HTTP status and readiness unknown':''}</div>
         <div class="hubline">${e.hub_relation==='CURATED_PORTFOLIO_GROUPING'?'Catalogued with':'Wired into'} <b>${hub.label}</b> — ${hub.desc}</div>
         ${e.release?`<div class="hubline">Published prerelease <b>${e.release.tag}</b> · source ${e.release.source_revision.slice(0,12)} · ZIP assets, not a running service</div>`:''}
         <div class="links">
@@ -481,11 +497,11 @@ async function boot(){
       const s = u.satellite;
       flyTo(hit.object.position, 10);
       panelBody.innerHTML = `
-        <span class="tier" style="border:1px solid #9ffce355;color:#9ffce3;background:#9ffce318">LIVE ${s.kind}</span>
+        <span class="tier" style="border:1px solid #9ffce355;color:#9ffce3;background:#9ffce318">DECLARED ${s.kind}</span>
         <h2>${s.name}</h2>
-        <div class="files">outer lattice · running surface</div>
+        <div class="files">outer lattice · source-listed surface</div>
         <div class="desc">${s.desc}</div>
-        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='REACHABLE'?' — answered a live ping':''}</div>
+        <div class="state" style="border:1px solid ${stateColor}55;color:${stateColor};background:${stateColor}12">${u.state}${u.state==='RESPONSE RECEIVED'?' — opaque response; HTTP status and readiness unknown':''}</div>
         <div class="links"><a href="${s.url}" target="_blank" rel="noopener">↗ open · ${s.url.replace('https://','')}</a></div>`;
     }
     panel.classList.add('open');
@@ -494,12 +510,14 @@ async function boot(){
   panel.querySelector('.close').onclick = ()=>{ panel.classList.remove('open'); flyHome(); };
 
   let storm = 0;
-  setInterval(()=>{ storm = 1; }, 45000);
+  setInterval(()=>{ if(!motionPaused()) storm = 1; }, 45000);
 
   const clock = new THREE.Clock();
   const tmpV = new THREE.Vector3();
+  let frame = null;
   function tick(){
-    requestAnimationFrame(tick);
+    frame = null;
+    if(motionPaused()) return;
     const t = clock.getElapsedTime();
     orbs.forEach((o,i)=>{
       const u = o.userData;
@@ -563,14 +581,26 @@ async function boot(){
     latticeOrbs.forEach((o,i)=>{ o.rotation.y = t*.8+i; o.rotation.x = t*.4; });
     controls.update();
     composer.render();
+    frame = requestAnimationFrame(tick);
   }
-  addEventListener('resize', ()=>{
-    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight); composer.setSize(innerWidth, innerHeight);
-  });
+  function syncMotion(){
+    const paused = motionPaused();
+    controls.autoRotate = !paused; controls.enableDamping = !paused;
+    if(paused && frame !== null){ cancelAnimationFrame(frame); frame=null; }
+    if(paused){ settleCamera(); composer.render(); }
+    else if(frame === null) frame=requestAnimationFrame(tick);
+  }
+  controls.addEventListener('change', ()=>{ if(motionPaused()) composer.render(); });
+  document.addEventListener('szl:motion-change', syncMotion);
+  document.addEventListener('visibilitychange', syncMotion);
+  new ResizeObserver(()=>{
+    if(!stage.clientWidth || !stage.clientHeight) return;
+    camera.aspect = stage.clientWidth/stage.clientHeight; camera.updateProjectionMatrix();
+    renderer.setSize(stage.clientWidth, stage.clientHeight); composer.setSize(stage.clientWidth, stage.clientHeight); composer.render();
+  }).observe(stage);
   document.getElementById('bootmsg').textContent = `${ESTATES.length} estates · ${LATTICE.length} satellites · ${tiers.length} territories · living orbits`;
-  setTimeout(()=>{ const b=document.getElementById('boot'); b.style.opacity=0; setTimeout(()=>b.remove(), 1200); }, 1300);
-  tick();
+  document.getElementById('boot').remove();
+  composer.render(); syncMotion();
 }
 boot().catch(()=>showFallback('HOLOGRAM UNAVAILABLE.', 'The renderer could not complete startup. No live map is claimed.'));
 </script>
