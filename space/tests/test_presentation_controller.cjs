@@ -91,7 +91,11 @@ test('verification retains its exact request shape and an old result cannot labe
   });
   await h.nodes.run.onclick();
   const verifying = h.nodes.verify.onclick();
-  for (let i = 0; i < 50 && !completeVerification; i++) await new Promise(resolve => setImmediate(resolve));
+  // Local recomputation awaits WebCrypto digests on the libuv thread pool, so a
+  // fixed number of event-loop turns is not a completion bound on a loaded runner.
+  for (const deadline = Date.now() + 5000; !completeVerification && Date.now() < deadline;) {
+    await new Promise(resolve => setTimeout(resolve, 1));
+  }
   assert.equal(typeof completeVerification, 'function');
   const request = h.calls.find(call => call.options.method === 'POST');
   assert.equal(request.url, '/api/c2/verify');
