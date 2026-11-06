@@ -1,0 +1,6 @@
+# Interpreter and test-runner output. CI's "Prove environment and tree are
+# clean" gate deletes these before `test -z "$(git status --porcelain)"`, so a
+# tracked copy turns that gate (and the Space publish job) red.
+__pycache__/
+*.py[cod]
+.pytest_cache/
