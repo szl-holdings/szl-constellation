@@ -17,9 +17,17 @@ def _canon(value):
 
 def _chain_receipt(metrics, *, previous=constellation.GENESIS):
     payload = {
+        "context": {
+            "machine": {"identity": "fixture", "cpu": "fixture", "os": "fixture", "python": "fixture"},
+            "dataset_revision": "fixture", "model_revision": "fixture",
+            "parameters": {"fixture": True},
+            "input_hashes": {"corpus": "a" * 64, "queries": "b" * 64, "qrels": "c" * 64},
+            "source": {"repository": "synthetic/harness", "commit": "d" * 40},
+        },
         "results": [
             {
                 "engine": "shared-engine",
+                "state": "MEASURED",
                 "runs": 3,
                 "metrics": metrics,
             }
@@ -391,3 +399,4 @@ def test_console_mount_failure_remains_visible(monkeypatch):
 )
 def test_crosscheck_api_rejects_malformed_request_shapes(client, payload):
     assert client.post("/api/crosscheck", json=payload).status_code == 422
+
