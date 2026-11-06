@@ -51,7 +51,7 @@ def models():
         return {"state": "MEASURED", "routable_models": line,
                 "label": "MEASURED - live from the Hub API at request time"}
     except Exception as e:
-        return {"state": "UNAVAILABLE", "detail": str(e)[:120],
+        return {"state": "UNAVAILABLE", "detail": type(e).__name__,
                 "label": "UNAVAILABLE - no fabricated model line"}
 
 class RouteRequest(BaseModel):

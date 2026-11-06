@@ -408,7 +408,7 @@ def _probe(url, timeout=6):
     except urllib.error.HTTPError as e:
         return {"url": url, "state": "MEASURED", "http": e.code, "note": "reachable, non-2xx"}
     except Exception as e:
-        return {"url": url, "state": "UNAVAILABLE", "detail": str(e)[:100]}
+        return {"url": url, "state": "UNAVAILABLE", "detail": type(e).__name__}  # class name only (CodeQL py/stack-trace-exposure)
 
 # ---------- current read-only assurance contract ----------
 
@@ -760,7 +760,7 @@ def _measure_org():
         gh = _fetch_json("https://api.github.com/search/repositories?q=org:szl-holdings&per_page=1", timeout=10)
         out["github"] = {"org_repos_total": gh.get("total_count"), "source": "github search api"}
     except Exception as e:
-        out["github"] = {"state": "UNAVAILABLE", "detail": str(e)[:100]}
+        out["github"] = {"state": "UNAVAILABLE", "detail": type(e).__name__}
         out["state"] = "PARTIAL"
     for kind, url in (("spaces", "https://huggingface.co/api/spaces?author=SZLHOLDINGS&limit=100"),
                       ("models", "https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100"),
@@ -770,7 +770,7 @@ def _measure_org():
             out["huggingface"][kind] = {"count": len(rows),
                                         "names": sorted(r.get("id", "").split("/")[-1] for r in rows)}
         except Exception as e:
-            out["huggingface"][kind] = {"state": "UNAVAILABLE", "detail": str(e)[:80]}
+            out["huggingface"][kind] = {"state": "UNAVAILABLE", "detail": type(e).__name__}
             out["state"] = "PARTIAL"
     out["receipt"] = _receipt({k: v for k, v in out.items() if k != "receipt"})
     out["label"] = "MEASURED live from GitHub + Hub APIs at request time (5-min cache)"
@@ -826,7 +826,7 @@ def khipu_line():
         try:
             models = _fetch_hub_listing("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
         except Exception as e:
-            return {"state": "UNAVAILABLE", "detail": str(e)[:100]}
+            return {"state": "UNAVAILABLE", "detail": type(e).__name__}
         rows = [{"model": m.get("id", "").split("/")[-1], "downloads": m.get("downloads", 0),
                  "likes": m.get("likes", 0), "task": m.get("pipeline_tag") or "-"}
                 for m in models if "khipu" in m.get("id", "").lower()]
@@ -846,7 +846,7 @@ def second_brain():
                          "files": len(d.get("siblings", [])), "private": d.get("private", False)})
         except Exception as e:
             ok = False
-            rows.append({"dataset": t, "state": "UNAVAILABLE", "detail": str(e)[:80]})
+            rows.append({"dataset": t, "state": "UNAVAILABLE", "detail": type(e).__name__})
     return {"state": "MEASURED" if ok else "PARTIAL", "memory_plane": rows,
             "label": "MEASURED where reachable - never fabricated"}
 
@@ -869,7 +869,7 @@ def killinchu_osint():
         return {"state": "MEASURED", "source": ep, "mesh": d, "receipt": _receipt(d),
                 "label": "MEASURED - live from the killinchu runtime's governed OSINT mesh"}
     except Exception as e:
-        return {"state": "UNAVAILABLE", "detail": f"killinchu runtime unreachable: {str(e)[:120]}",
+        return {"state": "UNAVAILABLE", "detail": f"killinchu runtime unreachable: {type(e).__name__}",
                 "declared_mesh": ["CISA KEV", "NIST NVD", "OFAC SDN", "UNSC 1718 (DPRK)", "CIA World Leaders",
                                    "NSA advisories", "CERT-UA", "Ukraine Data.gov.ua", "PRC MFA", "PRC State Council"],
                 "label": "UNAVAILABLE - declared source list shown, nothing fabricated"}
