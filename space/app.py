@@ -597,13 +597,31 @@ def _verify_chain_detailed(receipts):
             break
     return links, prev
 
-def verify_receipt_chain(text):
+def _parse_receipt_chain(text, *, require_receipts):
+    """Return (receipts, None), or (None, why the posted text is not a chain).
+
+    A JSON syntax error is rebuilt from the decoder's own fields, which locate
+    the fault in the caller's text (the same words as str(JSONDecodeError)).
+    Any other failure is reported by class name only, so no exception text
+    reaches a response (CodeQL py/stack-trace-exposure).
+    """
     try:
         receipts = json.loads(text)
-        if isinstance(receipts, dict): receipts = [receipts]
-        if not isinstance(receipts, list): raise ValueError("expected a JSON array of receipts")
+    except json.JSONDecodeError as e:
+        return None, f"parse error: {e.msg}: line {e.lineno} column {e.colno} (char {e.pos})"
     except Exception as e:
-        return {"state": "INVALID", "detail": f"parse error: {e}"}
+        return None, f"parse error: {type(e).__name__}"
+    if isinstance(receipts, dict):
+        receipts = [receipts]
+    if not isinstance(receipts, list) or (require_receipts and not receipts):
+        expected = "a non-empty JSON array" if require_receipts else "a JSON array"
+        return None, f"parse error: expected {expected} of receipts"
+    return receipts, None
+
+def verify_receipt_chain(text):
+    receipts, problem = _parse_receipt_chain(text, require_receipts=False)
+    if problem is not None:
+        return {"state": "INVALID", "detail": problem}
     links, terminal = _verify_chain_detailed(receipts)
     valid = len(links) == len(receipts) and all(l["valid"] for l in links)
     if not valid:
@@ -623,13 +641,9 @@ def _d2xy(n, d):
     return x, y
 
 def receipt_curve(chain_text):
-    try:
-        receipts = json.loads(chain_text)
-        if isinstance(receipts, dict): receipts = [receipts]
-        if not isinstance(receipts, list) or not receipts:
-            raise ValueError("expected a non-empty JSON array of receipts")
-    except Exception as e:
-        return {"state": "INVALID", "detail": f"parse error: {e}", "svg": ""}
+    receipts, problem = _parse_receipt_chain(chain_text, require_receipts=True)
+    if problem is not None:
+        return {"state": "INVALID", "detail": problem, "svg": ""}
     links, terminal = _verify_chain_detailed(receipts)
     n_receipts = len(receipts)
     k = 1
@@ -809,7 +823,7 @@ def kernel_line():
         try:
             models = _fetch_hub_listing("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
         except Exception as e:
-            return {"state": "UNAVAILABLE", "detail": f"hub api unreachable: {e}", "label": "UNAVAILABLE - no fabricated counts"}
+            return {"state": "UNAVAILABLE", "detail": f"hub api unreachable: {type(e).__name__}", "label": "UNAVAILABLE - no fabricated counts"}
         rows = []
         for m in models:
             name = m.get("id", "").split("/")[-1]
