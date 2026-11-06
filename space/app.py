@@ -809,7 +809,7 @@ def kernel_line():
         try:
             models = _fetch_hub_listing("https://huggingface.co/api/models?author=SZLHOLDINGS&limit=100")
         except Exception as e:
-            return {"state": "UNAVAILABLE", "detail": f"hub api unreachable: {e}", "label": "UNAVAILABLE - no fabricated counts"}
+            return {"state": "UNAVAILABLE", "detail": f"hub api unreachable: {type(e).__name__}", "label": "UNAVAILABLE - no fabricated counts"}
         rows = []
         for m in models:
             name = m.get("id", "").split("/")[-1]
