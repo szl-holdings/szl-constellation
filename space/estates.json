@@ -13,15 +13,15 @@
     {"effective": "2026-09-04", "revived": "llm-router", "directive": "owner - the routing plane returns as a flagship", "state": "REVIVING - szl-holdings/szl-router awaits owner unarchive click, then the doctrine battery + routing skeleton; charter: szl-constellation/docs/REVIVED-2026-09-04-llm-router.md"}
   ],
   "hubs": {
-    "anatomy": {"label": "ANATOMY", "url": "https://huggingface.co/betterwithage/anatomy", "desc": "3D navigable governed-AI organ substrate - the body every organ plugs into"},
+    "anatomy": {"label": "ANATOMY", "url": "https://huggingface.co/spaces/SZLHOLDINGS/anatomy", "desc": "3D navigable governed-AI organ substrate - the body every organ plugs into"},
     "second_brain": {"label": "SECOND BRAIN", "url": "https://huggingface.co/datasets/SZLHOLDINGS/szl-second-brain-inrepo", "desc": "Evidence-bound memory plane; szl-second-brain-inrepo corpus + second-brain estate (81 files)"},
     "ouroboros": {"label": "OUROBOROS LOOP", "url": "https://huggingface.co/SZLHOLDINGS/szl-ouroboros", "desc": "Bounded loop-tax recursion - every iteration pays, every cycle receipts; the learning never stops, the budget always converges"}
   },
   "estates": [
     {"name": "a11oy-factory", "files": 219, "tier": "Factory", "desc": "Decision Cell Compiler, admitted Lyte cell, frontier N1-N8", "repo": "szl-holdings/a11oy-factory", "hub": "second_brain"},
-    {"name": "anatomy", "files": 41, "tier": "Creative", "desc": "3D navigable governed-AI organ substrate - migrated live to betterwithage/anatomy", "repo": "szl-holdings/anatomy", "hub": "anatomy", "live": ["https://huggingface.co/betterwithage/anatomy"]},
+    {"name": "anatomy", "files": 41, "tier": "Creative", "desc": "3D navigable governed-AI organ substrate - public Space SZLHOLDINGS/anatomy", "repo": "szl-holdings/anatomy", "hub": "anatomy", "live": ["https://szlholdings-anatomy.hf.space"]},
     {"name": "ayllu", "files": 77, "tier": "Core", "desc": "Counsel lineage - governed advisory council, now with a live Space", "repo": "szl-holdings/ayllu", "hub": "second_brain", "live": ["https://szlholdings-ayllu.hf.space"]},
-    {"name": "cosmos", "files": 31, "tier": "Creative", "desc": "Three.js governed-AI cosmos - migrated live to betterwithage/cosmos", "repo": "szl-holdings/cosmos", "hub": "anatomy"},
+    {"name": "cosmos", "files": 31, "tier": "Creative", "desc": "Three.js governed-AI cosmos - repository archived; no SZLHOLDINGS Space", "repo": "szl-holdings/cosmos", "hub": "anatomy"},
     {"name": "counsel-assurance", "files": 11, "tier": "Vertical", "desc": "CONSOLIDATED - private duplicate of the counsel surface; canonical: SZLHOLDINGS/counsel", "repo": null, "hub": "second_brain"},
     {"name": "energy-attest-holo", "files": 9, "tier": "Receipts", "desc": "Holographic energy attestation surface", "repo": null, "hub": "ouroboros"},
     {"name": "energy-attested-runs", "files": 13, "tier": "Receipts", "desc": "Energy-attested run evidence", "repo": null, "hub": "ouroboros", "live": ["https://huggingface.co/datasets/SZLHOLDINGS/energy-attested-runs"]},
