@@ -69,3 +69,7 @@ This is the estate-as-product proof: one shader field whose every glow point is 
 ---
 
 <sub>SZL Holdings · governed, receipted, verifiable · Λ = Conjecture 1 (advisory, never a theorem) · trust ceiling 0.97</sub>
+
+## License
+
+Apache-2.0 — see [LICENSE](LICENSE).
