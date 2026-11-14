@@ -4,14 +4,13 @@ Two independent harnesses' receipt chains in; one verdict out:
 CONSISTENT / DIVERGENT (metric + max relative delta named) / INCOMPARABLE
 (no shared MEASURED lanes) / INVALID (a chain failed verification - fail closed).
 
-Canonical home with tests and CI: github.com/szl-holdings/szl-crosscheck
-(v0.1.0, 6/6 green pre-push). This module is byte-identical logic, placed here
-for the constellation to import. UI wiring into /panels is intentionally NOT
-done by overwrite - v4.2's app.py is owned by the parallel pipeline; mount
-one tab calling crosscheck_chains() when convenient.
+Measurement qualification follows szl-crosscheck v2: only explicit MEASURED
+results with complete, matching contexts may be compared. This compatibility
+adapter retains the constellation's JSON-string API, lane aliases and metric
+delta calculation. Hash receipts are unsigned integrity, not identity proof.
 """
 from __future__ import annotations
-import hashlib, json, math
+import hashlib, json, math, re
 from typing import Any, Dict, List, Tuple
 
 GENESIS = "0" * 64
@@ -74,20 +73,61 @@ def verify_chain(receipts: List[Dict[str, Any]]) -> Tuple[bool, str]:
         prev = r["chain_hash"]
     return True, f"chain valid ({len(receipts)} receipts)"
 
-def _measured_lanes(chain: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
-    lanes: Dict[str, Dict[str, float]] = {}
-    for r in chain:
-        for res in (r.get("results") or []):
-            if isinstance(res, dict) and res.get("runs") and isinstance(res.get("metrics"), dict):
-                lane = str(res.get("engine") or res.get("lane") or res.get("name") or "run")
-                lanes[lane] = {
-                    k: float(v)
-                    for k, v in res["metrics"].items()
-                    if isinstance(v, (int, float))
-                    and not isinstance(v, bool)
-                    and math.isfinite(v)
-                }
-    return lanes
+def validate_context(context):
+    if not isinstance(context, dict):
+        raise ValueError("missing measurement context")
+    for key in ("machine", "dataset_revision", "model_revision", "parameters", "input_hashes", "source"):
+        if key not in context or not context[key]:
+            raise ValueError(f"missing context.{key}")
+    if not isinstance(context["machine"], dict) or not all(
+        context["machine"].get(k) for k in ("identity", "cpu", "os", "python")
+    ):
+        raise ValueError("machine must bind identity, cpu, os, and python")
+    if not isinstance(context["parameters"], dict):
+        raise ValueError("parameters must be an object")
+    hashes = context["input_hashes"]
+    if not isinstance(hashes, dict) or not all(
+        isinstance(hashes.get(k), str) and re.fullmatch(r"[0-9a-f]{64}", hashes[k])
+        for k in ("corpus", "queries", "qrels")
+    ):
+        raise ValueError("input_hashes must bind corpus, queries, and qrels")
+    source = context["source"]
+    if not isinstance(source, dict) or not source.get("repository") or not (
+        isinstance(source.get("commit"), str) and re.fullmatch(r"[0-9a-f]{40}", source["commit"])
+    ):
+        raise ValueError("source must name repository and full commit")
+    return {k: v for k, v in context.items() if k != "source"}
+
+
+def _measured_lanes(chain):
+    lanes, contexts, sources = {}, [], []
+    for receipt in chain:
+        results = receipt.get("results", [])
+        if not isinstance(results, list):
+            raise ValueError("results must be a list")
+        for result in results:
+            if not isinstance(result, dict):
+                raise ValueError("result must be an object")
+            if result.get("state") != "MEASURED":
+                continue
+            context = receipt.get("context")
+            contexts.append(validate_context(context))
+            sources.append(context["source"])
+            lane = result.get("engine") or result.get("lane") or result.get("name")
+            metrics = result.get("metrics")
+            if not isinstance(lane, str) or not lane or lane in lanes:
+                raise ValueError("missing or ambiguous duplicate measured lane")
+            if not isinstance(metrics, dict) or not metrics:
+                raise ValueError("MEASURED requires nonempty metrics")
+            if not all(isinstance(k, str) and type(v) in (int, float) and math.isfinite(v)
+                       for k, v in metrics.items()):
+                raise ValueError("metrics must be finite numbers, not booleans or strings")
+            lanes[lane] = metrics
+    if contexts and any(c != contexts[0] for c in contexts[1:]):
+        raise ValueError("mixed measurement contexts within a chain")
+    return lanes, contexts[0] if contexts else None, sources
+
+
 
 def crosscheck_chains(text_a: str, text_b: str, rel_tol: float = 0.01) -> Dict[str, Any]:
     """JSON strings in (paste-friendly), verdict dict out."""
@@ -116,10 +156,18 @@ def crosscheck_chains(text_a: str, text_b: str, rel_tol: float = 0.01) -> Dict[s
         return {"state": "INVALID", "detail": f"chain A: {det_a}"}
     if not ok_b:
         return {"state": "INVALID", "detail": f"chain B: {det_b}"}
-    la, lb = _measured_lanes(a), _measured_lanes(b)
+    try:
+        la, context_a, _ = _measured_lanes(a)
+        lb, context_b, _ = _measured_lanes(b)
+    except (ValueError, TypeError, OverflowError) as error:
+        return {"state": "INVALID", "detail": str(error)}
+    if context_a != context_b:
+        return {"state": "INCOMPARABLE", "verdict": "INCOMPARABLE",
+                "detail": "machine, inputs, model, or parameters differ",
+                "a_lanes": sorted(la), "b_lanes": sorted(lb)}
     shared = sorted(set(la) & set(lb))
     if not shared:
-        return {"state": "MEASURED", "verdict": "INCOMPARABLE",
+        return {"state": "INCOMPARABLE", "verdict": "INCOMPARABLE",
                 "detail": "no shared MEASURED lanes", "a_lanes": sorted(la), "b_lanes": sorted(lb)}
     verdicts, overall = [], "CONSISTENT"
     metrics_compared = 0
@@ -149,3 +197,4 @@ def crosscheck_chains(text_a: str, text_b: str, rel_tol: float = 0.01) -> Dict[s
     return {"state": "MEASURED", "verdict": overall, "lanes": verdicts, "tolerance": rel_tol,
             "dual_receipt": dual,
             "label": "cross-implementation verification - two chains, one truth test"}
+
