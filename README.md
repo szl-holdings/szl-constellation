@@ -104,3 +104,32 @@ Its source landing receipt is in
 ---
 
 <sub>SZL Holdings · governed, receipted, verifiable · Λ = Conjecture 1 (advisory, never a theorem) · trust ceiling 0.97</sub>
+## Public Frontier Atlas — interactive 3D public estate
+
+**[Open the source-bound holographic public atlas](https://szlholdings-szl-constellation.hf.space/atlas/)**
+
+The November 2026 atlas is an additive path on the existing Constellation
+Space. It uses GPU-instanced Three.js/WebGL, 3D orbit and picking, per-vertical
+filters, per-Space/model/dataset deep links, and an independently accessible
+searchable directory. It reads only anonymously listed *public* Hugging Face
+metadata and only the exact membership links that the dated vertical
+registry declares. No private repository, Space, model, dataset or token is
+exported. Any unmatched public asset is explicitly unassigned, not guessed.
+
+The viewer's four evidence boundaries are **PUBLIC_HUB_METADATA**,
+**HISTORICAL_DECLARED_RELATIONSHIPS**, **NOT_EVALUATED_RUNTIME**, and
+**NO_EXECUTION_AUTHORITY**. No observed glow, count, checksum, or 3D edge
+establishes a deployed model, trained quality, medical validity, paid
+settlement, source signature or permission to act. The public API
+`GET /api/atlas/public` is 300-second cached and fails closed without
+serving expired data. No model weights or dataset rows are ingested.
+
+Direct lenses: `/atlas/?vertical=killinchu`, `/atlas/?vertical=sentra`,
+`/atlas/?vertical=terra`, `/atlas/?vertical=lyte`,
+`/atlas/?vertical=counsel`, `/atlas/?vertical=finance`,
+`/atlas/?vertical=puriq`, `/atlas/?vertical=david-leads`,
+and `/atlas/?space=SZLHOLDINGS/anatomy`. Any anonymously listed public
+asset is addressable by its exact Hub identifier, not a hardcoded shortlist.
+
+Architecture, sources, privacy tests, failure modes and open-source review:
+[Public Frontier Atlas design](docs/PUBLIC_FRONTIER_ATLAS_20261117.md).
