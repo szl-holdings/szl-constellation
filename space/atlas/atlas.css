@@ -123,3 +123,14 @@ footer a{color:#8bc8d0}
 #linked-assets p{color:#788ca8;font:10px/1.5 ui-monospace,monospace;margin:0 0 9px}
 #linked-assets button{display:block;width:100%;text-align:left;margin:5px 0;padding:8px 9px;border:1px solid #3e3a66;border-radius:5px;background:#17162c;color:#d8cfff;font:11px ui-monospace,monospace;overflow-wrap:anywhere}
 #linked-assets button:hover{background:#29223f;border-color:#a89adb}
+
+.card-toggle>span{display:block;min-width:0;flex:1}
+.card-toggle>span small{display:block;margin-top:3px}
+@media(max-width:800px){
+  .rail .card-toggle,.rail .edge-legend{grid-column:1/-1}
+  .edge-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}
+  .edge-legend>div{margin:0}
+  .edge-legend>small{grid-column:1/-1}
+  .viewport-top{font-size:8px;letter-spacing:.02em;gap:3px}
+  .viewport-top .right{font-size:8px;max-width:43%;text-align:right}
+}

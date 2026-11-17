@@ -142,6 +142,14 @@ async def main(args):
                     overflow=await page.evaluate("document.documentElement.scrollWidth>innerWidth+2")
                     check(f"{width}: no horizontal page overflow",not overflow)
                     await page.screenshot(path=str(out/f"atlas-{width}-public-synthetic.png"),full_page=True)
+                    if width==375:
+                        rail=await page.locator(".rail").bounding_box()
+                        toggle=await page.locator(".card-toggle").bounding_box()
+                        legend=await page.locator(".edge-legend").bounding_box()
+                        check("mobile card controls occupy the full responsive rail",
+                              rail is not None and toggle is not None and legend is not None
+                              and toggle["width"] >= rail["width"]*.76
+                              and legend["width"] >= rail["width"]*.76)
                     if width==1280:
                         await page.locator("#vertical").select_option("killinchu")
                         n=int((await page.locator("#visible-count").inner_text()).split()[0])
