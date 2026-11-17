@@ -110,3 +110,13 @@ Doctrine v11 - nothing glows that did not earn it.
 </details>
 
 SZL Orbit artwork · [CC BY 4.0](https://github.com/szl-holdings/szl-brand/blob/27d12e77fc0f9f1a0e5fae8b34adf2380d51d070/kit/LICENSE).
+
+### 2026 public 3D atlas
+
+Open `/atlas/` for the public-only WebGL graph of all anonymously listed
+SZLHOLDINGS Spaces, models and datasets. View the bounded, metadata-only JSON
+at `/api/atlas/public`. Private resources are never published, inferred or
+counted. The dated vertical associations are declarations, not live readiness.
+The standalone directory remains useful without WebGL, and JS is fully
+same-origin with locally vendored MIT-licensed Three.js. See the canonical
+GitHub [atlas documentation](https://github.com/szl-holdings/szl-constellation/blob/main/docs/PUBLIC_FRONTIER_ATLAS_20261117.md).

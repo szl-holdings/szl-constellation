@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from crosscheck import crosscheck_chains
+from atlas_public import cached_public_atlas
 from presentation import ASSETS as PRESENTATION_ASSETS, read_asset
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -1017,7 +1018,7 @@ def build_consoles():
     import gradio as gr
     with gr.Blocks(title="SZL Constellation - Consoles", fill_width=True) as demo:
         gr.HTML("""<a class="console-skip" href="#console-main">Skip to main content</a><div class="console-identity"><img src="/assets/szl/szl-icon-32.svg" alt="SZL Holdings" width="40" height="40"><div><strong>CONSTELLATION</strong><small>SZL Holdings · source and evidence</small></div></div>
-        <nav class="backbar" aria-label="Constellation navigation"><a href="/">Estate map</a><a href="/c2">C2 reference</a><a href="/fabric">Shader fabric</a><a href="/api/constellation/manifest">Declared manifest</a><button type="button" data-theme-toggle>Light theme</button><button type="button" data-motion-toggle aria-pressed="false">Pause motion</button></nav>
+        <nav class="backbar" aria-label="Constellation navigation"><a href="/">Estate map</a><a href="/atlas/">Live public 3D atlas</a><a href="/c2">C2 reference</a><a href="/fabric">Shader fabric</a><a href="/api/constellation/manifest">Declared manifest</a><button type="button" data-theme-toggle>Light theme</button><button type="button" data-motion-toggle aria-pressed="false">Pause motion</button></nav>
         <h1 class="console-title" id="console-main" tabindex="-1">Vertical consoles</h1>
         <p class="console-description">Inspect a vertical, then choose its explicit probe or local computation. Every console probes live at request time and reports UNAVAILABLE rather than fabricate. Reachability, source integrity and action approval remain separate claims.</p>""")
         with gr.Tabs():
@@ -1156,6 +1157,7 @@ def create_app():
     import gradio as gr
     from fastapi import FastAPI, Request
     from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+    from fastapi.staticfiles import StaticFiles
 
     app = FastAPI(title="SZL Constellation")
 
@@ -1185,6 +1187,28 @@ def create_app():
     @app.get("/", include_in_schema=False)
     def root():
         return FileResponse(os.path.join(HERE, "holo", "index.html"))
+
+    # The 3D atlas is additive and its static assets contain no credentials.
+    # It never changes the pre-existing source-bound root or C2 renderers.
+    app.mount("/atlas", StaticFiles(directory=os.path.join(HERE, "atlas"), html=True),
+              name="public-frontier-atlas")
+
+    @app.get("/api/atlas/public", include_in_schema=False)
+    def api_atlas_public():
+        try:
+            result = cached_public_atlas()
+            return JSONResponse(result, headers={
+                "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
+            })
+        except Exception:
+            # Neither private names, HTTP body details nor exception text cross
+            # this public boundary. No stale snapshot is promoted on failure.
+            return JSONResponse(
+                {"schema": "szl.public-hub-holographic-atlas/v1", "state": "UNAVAILABLE",
+                 "reason_code": "PUBLIC_HUB_METADATA_NOT_VERIFIED",
+                 "production_qualified": False, "execution_authorized": False},
+                status_code=503, headers={"Cache-Control": "no-store",
+                                           "X-Content-Type-Options": "nosniff"})
 
     @app.get("/c2", include_in_schema=False)
     def c2():

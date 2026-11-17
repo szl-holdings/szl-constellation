@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>SZL • Public Frontier Atlas | Holographic 3D</title>
+  <meta name="description" content="3D explorer for publicly listed SZLHOLDINGS Hugging Face Spaces, models and datasets, grounded in observed metadata and declared vertical relationships.">
+  <link rel="stylesheet" href="/atlas/atlas.css">
+  <link rel="icon" href="/assets/szl/szl-icon-32.svg" type="image/svg+xml">
+</head>
+<body>
+  <a href="#directory" class="skip">Skip to accessible asset directory</a>
+  <div class="ambient" aria-hidden="true"></div>
+  <header class="topbar">
+    <div class="identity">
+      <div class="sigil" aria-hidden="true"><span>✳</span></div>
+      <div><div class="eyebrow">SZL HOLDINGS / SOVEREIGN FRONTIER</div><strong>ATLAS <span>∞</span> CONSTELLATION</strong></div>
+    </div>
+    <nav aria-label="Atlas navigation">
+      <a href="/">Original constellation</a>
+      <a href="/panels">Vertical consoles</a>
+      <a href="https://szlholdings-szl-command-center.hf.space/" target="_blank" rel="noopener noreferrer">Command Center</a>
+      <a href="https://github.com/szl-holdings/szl-constellation" target="_blank" rel="noopener noreferrer">Source</a>
+    </nav>
+    <div class="status" id="status" role="status">PUBLIC HUB • FETCH PENDING</div>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="atlas-title">
+      <div><p class="kicker">AN OBSERVATORY, NOT A SIMULATION OF FACT</p>
+        <h1 id="atlas-title">See the estate.<br><em>Trace the evidence.</em></h1>
+        <p>Each asset node resolves to a publicly listed Hugging Face resource; vertical hubs are historical SZL declarations. Every edge is a dated declared relationship—not a runtime dependency. Neither glow nor proximity establishes model quality, deployment readiness or execution authority.</p>
+      </div>
+      <div class="metrics" aria-label="Live public inventory">
+        <div class="metric"><b id="count-space">—</b><small>PUBLIC SPACES</small></div>
+        <div class="metric"><b id="count-model">—</b><small>PUBLIC MODELS</small></div>
+        <div class="metric"><b id="count-dataset">—</b><small>PUBLIC DATASETS</small></div>
+        <div class="metric"><b id="count-vertical">—</b><small>DECLARED VERTICALS</small></div>
+      </div>
+    </section>
+
+    <section class="observatory" aria-label="Holographic 3D public estate explorer">
+      <aside class="rail" aria-label="Visualization filters">
+        <div class="section-label">01 / EXPLORATION</div>
+        <label for="search">Find an asset</label>
+        <input id="search" type="search" autocomplete="off" placeholder="Search public names or tags…" maxlength="128">
+        <label for="vertical">Vertical lens</label>
+        <select id="vertical"><option value="all">All visible assets</option><option value="unassigned">Unassigned to legacy verticals</option></select>
+        <div class="rule"></div>
+        <div class="section-label">02 / VISIBLE LAYERS</div>
+        <label class="switch"><input type="checkbox" value="space" checked><span class="dot space"></span> Spaces</label>
+        <label class="switch"><input type="checkbox" value="model" checked><span class="dot model"></span> Models</label>
+        <label class="switch"><input type="checkbox" value="dataset" checked><span class="dot dataset"></span> Datasets</label>
+        <label class="switch"><input type="checkbox" value="vertical" checked><span class="dot vertical"></span> Verticals</label>
+        <div class="rule"></div>
+        <div class="section-label">03 / NAVIGATION</div>
+        <button id="reset" type="button">Reset camera <span>⌂</span></button>
+        <button id="motion" type="button" aria-pressed="false">Pause orbit <span>◉</span></button>
+        <button id="frame" type="button">Frame selected <span>⌖</span></button>
+        <p class="instruction">Drag to orbit. Scroll or pinch to zoom. Select a node for its evidence identity. All assets are also accessible in the directory below.</p>
+      </aside>
+
+      <div class="viewport" id="viewport" role="region" aria-label="Interactive three-dimensional asset graph">
+        <div class="viewport-top"><span class="live-pip"></span> SOURCE-BOUND METADATA GRAPH <span class="right">3D / WEBGL</span></div>
+        <div class="viewport-bottom"><strong id="view-message">Initializing public observatory…</strong><span id="visible-count">— visible</span></div>
+        <div class="crosshair" aria-hidden="true"></div>
+        <div id="fallback" class="fallback" hidden><h2>3D renderer unavailable</h2><p>The directory is still available below. No simulated graph is substituted for WebGL.</p><a href="#directory">Open the directory</a></div>
+        <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+      </div>
+
+      <aside class="inspector" aria-live="polite" aria-label="Selected entity evidence details">
+        <div class="section-label">04 / EVIDENCE INSPECTOR</div>
+        <div class="selected-hero"><span class="selected-orb" aria-hidden="true">◇</span><small id="selected-kind">NO ENTITY SELECTED</small></div>
+        <h2 id="selected-name">Select any point of light.</h2>
+        <p id="selected-sub">The inspector keeps publicly listed metadata distinct from the historical vertical taxonomy and from actual runtime qualification.</p>
+        <dl id="metadata"><div><dt>Source</dt><dd>Public Hugging Face API</dd></div><div><dt>Authority</dt><dd>None granted</dd></div></dl>
+        <div class="inspector-actions">
+          <a id="open-asset" href="https://huggingface.co/SZLHOLDINGS" target="_blank" rel="noopener noreferrer">Explore on Hugging Face ↗</a>
+          <button id="share-selection" type="button">Copy deep link</button>
+        </div>
+        <p class="boundary">NO CLAIM WITHOUT EVIDENCE<br><span>Public metadata ≠ trained model quality ≠ production-ready ≠ permission to act.</span></p>
+      </aside>
+    </section>
+
+    <section class="directory" id="directory" tabindex="-1" aria-labelledby="dir-title">
+      <div class="directory-head"><div><p class="kicker">ACCESSIBLE REFERENCE PLANE</p><h2 id="dir-title">Public asset directory</h2><p>Live anonymous Hub metadata, alongside explicitly dated registry associations. No private resources are listed.</p></div>
+        <div class="directory-actions"><button type="button" id="export" disabled>Export current public JSON ↓</button><span id="timestamp">No observation yet</span></div>
+      </div>
+      <p id="directory-result" role="status">Awaiting live metadata.</p>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Asset</th><th scope="col">Kind</th><th scope="col">Declared vertical</th><th scope="col">Provenance</th></tr></thead><tbody id="asset-rows"><tr><td colspan="4">Public listing not yet loaded.</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <footer><span>SZL HOLDINGS • CONTROL BEFORE ACTION, EVIDENCE AFTER</span><span>WebGL: vendored three.js (MIT) • Public Hub metadata only • <a href="/api/atlas/public">Evidence JSON</a> • <a href="https://github.com/szl-holdings/szl-constellation">Canonical source</a></span></footer>
+  <script type="module" src="/atlas/atlas.js"></script>
+</body>
+</html>
