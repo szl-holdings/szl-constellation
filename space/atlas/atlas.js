@@ -21,7 +21,9 @@ let scene, camera, renderer, controls, mesh, linkLines = [], halo;
 let rotator = false;
 let animationRequested = true;
 const positions = new Map();
+const allPositions = new Map();
 let cardTargetsByVertical = new Map();
+let cardTargetsBySpace = new Map();
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
@@ -113,9 +115,12 @@ function isCardEdge(edge) {
 }
 function indexIndirectCardTargets() {
   cardTargetsByVertical = new Map();
+  cardTargetsBySpace = new Map();
   const byId = new Map(nodes.map(n => [n.id, n]));
   for (const link of snapshot.links.filter(isCardEdge)) {
     const space = byId.get(link.source);
+    if (!cardTargetsBySpace.has(link.source)) cardTargetsBySpace.set(link.source, new Set());
+    cardTargetsBySpace.get(link.source).add(link.target);
     for (const vertical of space.verticals) {
       if (!cardTargetsByVertical.has(vertical)) cardTargetsByVertical.set(vertical, new Set());
       cardTargetsByVertical.get(vertical).add(link.target);
@@ -143,10 +148,20 @@ function emitData(data) {
     option.textContent = item.label;
     select.appendChild(option);
   }
+  const spaceSelect = $('space-lens');
+  const publicSpaces = nodes.filter(n => n.kind === 'space')
+    .sort((a, b) => a.label.localeCompare(b.label));
+  for (const item of publicSpaces) {
+    const option = document.createElement('option');
+    option.value = item.hub_id;
+    option.textContent = item.label;
+    spaceSelect.appendChild(option);
+  }
   const deep = params.get('space') || params.get('model') || params.get('dataset') || '';
   const target = nodes.find(n => n.hub_id === deep) ||
     nodes.find(n => n.vertical_id && n.vertical_id === params.get('vertical'));
   if (target?.kind === 'vertical') select.value = target.vertical_id;
+  if (target?.kind === 'space') spaceSelect.value = target.hub_id;
   filterAndRender();
   if (target) choose(target.id);
 }
@@ -154,6 +169,13 @@ function emitData(data) {
 function passes(node) {
   const types = [...document.querySelectorAll('.switch input:checked')].map(x => x.value);
   if (!types.includes(node.kind)) return false;
+  const selectedSpace = $('space-lens').value;
+  if (selectedSpace !== 'all') {
+    const sourceId = 'space:' + selectedSpace;
+    if (node.id !== sourceId && cardTargetsBySpace.get(sourceId)?.has(node.id) !== true) {
+      return false;
+    }
+  }
   const choice = $('vertical').value;
   if (choice === 'unassigned' && (node.kind === 'vertical' || node.verticals.length !== 0)) return false;
   if (choice !== 'all' && choice !== 'unassigned') {
@@ -220,7 +242,12 @@ function filterAndRender() {
   if (!snapshot) return;
   visible = nodes.map(passes);
   const count = visible.filter(Boolean).length;
+  if (mesh) layoutPublicSpaceLens();
   $('visible-count').textContent = count + ' visible / ' + nodes.length;
+  const activeSpace = $('space-lens').value;
+  $('view-message').textContent = activeSpace === 'all'
+    ? 'ANONYMOUS PUBLIC HUB · TOPOLOGY DECLARED'
+    : 'PUBLIC SPACE CARD LENS · NOT A RUNTIME DEPENDENCY';
   updateTable();
   if (mesh) {
     const dummy = new THREE.Object3D();
@@ -233,6 +260,9 @@ function filterAndRender() {
       mesh.setMatrixAt(i,dummy.matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;
+    if (halo?.visible && selectedId && positions.has(selectedId)) {
+      halo.position.copy(positions.get(selectedId));
+    }
     buildEdges();
     if (selectedId && !visible[nodes.findIndex(n=>n.id===selectedId)]) choose(null);
   }
@@ -244,6 +274,8 @@ function showSelected(node) {
   dl.replaceChildren();
   const related = $('linked-assets');
   related.replaceChildren();
+  const focusButton = $('focus-space');
+  focusButton.hidden = node?.kind !== 'space';
   if (!node) {
     kind.textContent='NO ENTITY SELECTED';name.textContent='Select any point of light.';
     sub.textContent='Click a node or select from the directory; private resources are not in the public graph.';
@@ -354,6 +386,50 @@ function stablePositions() {
   }
 }
 
+function frameVisibleGraph() {
+  if (!camera || !controls) return;
+  const shown = nodes.filter((_node, index) => visible[index])
+    .map(node => positions.get(node.id)).filter(Boolean);
+  if (!shown.length) return;
+  const bounds = new THREE.Box3().setFromPoints(shown);
+  const center = bounds.getCenter(new THREE.Vector3());
+  const radius = Math.max(bounds.getSize(new THREE.Vector3()).length() / 2, 5);
+  const fov = THREE.MathUtils.degToRad(camera.fov);
+  const distance = THREE.MathUtils.clamp(radius / Math.sin(fov / 2) * 1.35, 17, 190);
+  controls.target.copy(center);
+  camera.position.copy(center).add(new THREE.Vector3(distance * .3, distance * .2, distance));
+  camera.lookAt(center);
+  controls.update();
+}
+
+function layoutPublicSpaceLens() {
+  // A deliberate graph layout, NOT evidence that a runtime dependency exists.
+  // The same exact Hub card edges are rendered; only coordinates change.
+  for (const [id, original] of allPositions) positions.set(id, original.clone());
+  const value = $('space-lens').value;
+  if (value === 'all') return;
+  const sourceId = 'space:' + value;
+  if (!allPositions.has(sourceId)) return;
+  positions.set(sourceId, new THREE.Vector3(0, 0, 0));
+  const targets = [...(cardTargetsBySpace.get(sourceId) || [])].sort();
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  const byKind = {
+    model: targets.filter(id => byId.get(id)?.kind === 'model'),
+    dataset: targets.filter(id => byId.get(id)?.kind === 'dataset')
+  };
+  for (const [kind, items] of Object.entries(byKind)) {
+    const radius = kind === 'model' ? 9 : 15;
+    items.forEach((id, index) => {
+      const angle = (index / Math.max(items.length, 1)) * Math.PI * 2
+        + (kind === 'model' ? .25 : .7);
+      positions.set(id, new THREE.Vector3(
+        Math.cos(angle) * radius, kind === 'model' ? 3 : -3,
+        Math.sin(angle) * radius
+      ));
+    });
+  }
+}
+
 function buildEdges() {
   if (!scene) return;
   for (const line of linkLines) {
@@ -414,6 +490,8 @@ function install3D() {
     new THREE.MeshBasicMaterial({color:0x3acfc1,transparent:true,opacity:.25}));
   ring.rotation.set(1.13,.2,.5);scene.add(ring);
   stablePositions();
+  allPositions.clear();
+  for (const [id, value] of positions) allPositions.set(id, value.clone());
   const geom=new THREE.IcosahedronGeometry(.7,1);
   const mat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.92});
   mesh=new THREE.InstancedMesh(geom,mat,nodes.length);
@@ -436,6 +514,7 @@ function install3D() {
   scene.add(new THREE.Points(starGeo,
     new THREE.PointsMaterial({color:0x6c9ab9,size:.6,sizeAttenuation:true,transparent:true,opacity:.67})));
   filterAndRender();
+  if ($('space-lens').value !== 'all') frameVisibleGraph();
 
   const rectAndPoint = (event)=>{
     const rect=renderer.domElement.getBoundingClientRect();
@@ -507,16 +586,43 @@ for(const input of document.querySelectorAll('.switch input'))input.addEventList
 $('include-card-linked').addEventListener('change',filterAndRender);
 $('search').addEventListener('input',filterAndRender);
 $('vertical').addEventListener('change',()=>{
-  filterAndRender();choose(null);
+  $('space-lens').value='all';
+  filterAndRender();
+  choose(null);
+});
+$('space-lens').addEventListener('change',()=>{
+  $('vertical').value='all';
+  $('search').value='';
+  const space=$('space-lens').value;
+  filterAndRender();
+  if (space==='all') {
+    choose(null);
+    if (controls) { camera.position.set(0,39,106);controls.target.set(0,0,0);controls.update(); }
+    return;
+  }
+  choose('space:'+space);
+  frameVisibleGraph();
+});
+$('focus-space').addEventListener('click',()=>{
+  const item=nodes.find(node=>node.id===selectedId);
+  if (!item || item.kind!=='space') return;
+  $('space-lens').value=item.hub_id;
+  $('space-lens').dispatchEvent(new Event('change'));
 });
 $('reset').addEventListener('click',()=>{
   if(!controls)return;
   camera.position.set(0,39,106);controls.target.set(0,0,0);controls.update();
 });
 $('frame').addEventListener('click',()=>{
+  if (!controls) return;
+  if ($('space-lens').value !== 'all') {
+    frameVisibleGraph();
+    return;
+  }
   const node=nodes.find(n=>n.id===selectedId);
-  if(!node||!controls)return;
+  if (!node) return;
   const p=positions.get(node.id);
+  if (!p) return;
   controls.target.copy(p);
   camera.position.copy(p).add(new THREE.Vector3(0,6,17));
   controls.update();
