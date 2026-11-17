@@ -95,3 +95,44 @@ External references: Hugging Face Hub `list_spaces(linked=True)`
 documentation and Space Card metadata guide. No open-source code copied
 to produce the edge semantics: the Python and JS graph projection is
 original SZL implementation using existing vendored, MIT-licensed Three.js.
+
+## Per-Space holographic lens — additive 2026-11-17 upgrade
+
+The public atlas now exposes **one dynamically generated lens for every
+anonymously discoverable SZLHOLDINGS Space**. This is a source-backed
+navigation feature of Constellation, not a redeployment of those Spaces.
+
+The `Public Space lens` menu is built exclusively from the validated public
+Space nodes in `/api/atlas/public`. Selecting a Space (or opening an exact
+`?space=SZLHOLDINGS/<id>` link) isolates:
+
+- the selected, exact-Hub-ID public Space;
+- only its explicitly declared model and dataset references that independently
+  passed the anonymous public-census filter;
+- cyan/violet graph edges only where they already exist in the bounded
+  provenance schema.
+
+The lens repositions these admitted nodes into an illustrative 3D orbit around
+the Space, with models and datasets on distinct rings. Position, color,
+distance and animation carry **no operational or causal meaning**. There is
+no extra data fetch, no private metadata, no new graph edge, no inferred
+training dependency, and no model loading. Both the 3D field and accessible
+table use the same exact visible-node filter. Spaces with zero admitted card
+links display only their own node; the UI does not synthesize neighbors.
+
+Every Space is selectable whether or not it has one of the eight September
+2026 dated-vertical assignments. Vertical membership remains independent and
+is never silently changed by lens selection. Switching to a legacy vertical
+resets the Space lens, while following an exact card link keeps the current
+Space focus. The inspector's **Focus this Space in 3D** control and the browser
+URL permit reproducible deep links. On a new page view, a Space ID that is
+not present in the public census is *not* materialized or revealed.
+
+Camera framing uses the bounding box of the currently admitted nodes. The
+renderer caps device pixel ratio and provides a text-based directory even
+without WebGL. No action authority or readiness claim is added.
+
+Verification includes isolated Playwright tests at desktop and mobile widths
+for exact Space dropdown membership, source/card visibility, empty-card
+behavior, direct-deep-link focus, interactive inspector, and safe fallback,
+plus the existing python privacy and artifact-boundary tests.

@@ -137,6 +137,21 @@ async def main(args):
                     check(f"{width}: public scope counts",await page.locator("#count-model").inner_text()=="4" and await page.locator("#count-dataset").inner_text()=="3")
                     check(f"{width}: two distinct public Space-card links",await page.locator("#card-link-count").inner_text()=="2")
                     check(f"{width}: all assets listed",await page.locator("#asset-rows tr").count()==22)
+                    check(f"{width}: one Space lens per public Space",
+                          await page.locator("#space-lens option").count()==8)
+                    await page.locator("#space-lens").select_option("SZLHOLDINGS/killinchu")
+                    lens_count=int((await page.locator("#visible-count").inner_text()).split()[0])
+                    check(f"{width}: single-Space source/card orbit",
+                          lens_count==3 and await page.locator("#asset-rows tr").count()==3
+                          and await page.locator("#selected-name").inner_text()=="killinchu"
+                          and "NOT A RUNTIME DEPENDENCY" in await page.locator("#view-message").inner_text(),
+                          {"visible":lens_count})
+                    await page.screenshot(path=str(out/f"atlas-{width}-space-killinchu-synthetic.png"),full_page=True)
+                    await page.locator("#space-lens").select_option("SZLHOLDINGS/terra")
+                    orphan_count=int((await page.locator("#visible-count").inner_text()).split()[0])
+                    check(f"{width}: Space with no card refs shows no invented edges",
+                          orphan_count==1 and await page.locator("#asset-rows tr").count()==1)
+                    await page.locator("#space-lens").select_option("all")
                     check(f"{width}: no client error or provider write",not errors and not writes and not off_origin,
                           {"errors":errors,"writes":writes,"off_origin":off_origin})
                     overflow=await page.evaluate("document.documentElement.scrollWidth>innerWidth+2")
@@ -163,8 +178,13 @@ async def main(args):
                 await page.wait_for_function("document.getElementById('selected-name').textContent==='killinchu'",timeout=20000)
                 check("each public Space has a deep-link inspector",await page.locator("#open-asset").get_attribute("href")==
                       "https://huggingface.co/spaces/SZLHOLDINGS/killinchu")
+                check("deep-link automatically enters its exact Space lens",
+                      await page.locator("#space-lens").input_value()=="SZLHOLDINGS/killinchu"
+                      and await page.locator("#asset-rows tr").count()==3)
                 check("Space inspector exposes exact public card-referenced assets",
                       await page.locator("#linked-assets button").count()==2)
+                check("focused Space action visibly available",
+                      await page.locator("#focus-space").is_visible())
                 await page.get_by_role("button",name="→ [MODEL] Khipu").click()
                 await page.wait_for_function("document.getElementById('selected-name').textContent==='Khipu'",timeout=20000)
                 check("Space-card model opens source-bound Khipu inspector",

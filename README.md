@@ -145,3 +145,15 @@ users follow exact referenced public resources, with the Space's source SHA
 recorded for each card edge. None of this establishes model loading,
 training, data usage, signed receipts, deployment readiness, or permission to
 act. See [atlas provenance design](docs/PUBLIC_FRONTIER_ATLAS_20261117.md).
+
+### Per-Space interactive 3D lenses
+
+Every anonymously discoverable public SZLHOLDINGS Space now has an exact
+Source/Card 3D lens. Select one through **Public Space lens** or use
+`/atlas/?space=SZLHOLDINGS/anatomy`, and the field shows only the chosen
+Space and independently public assets explicitly referenced by its Space
+card. An illustrative orbital layout places models and datasets in
+distinguishable rings; it is not a trained dependency graph or execution
+receipt. Spaces without card references retain an honest one-node view.
+The accessible table and the source-bound inspector use the same selection.
+Native Space applications and deployment permissions are unchanged.

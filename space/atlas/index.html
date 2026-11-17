@@ -46,7 +46,10 @@
         <div class="section-label">01 / EXPLORATION</div>
         <label for="search">Find an asset</label>
         <input id="search" type="search" autocomplete="off" placeholder="Search public names or tags…" maxlength="128">
-        <label for="vertical">Vertical lens</label>
+        <label for="space-lens">Public Space lens</label>
+        <select id="space-lens" aria-describedby="space-lens-note"><option value="all">Entire public estate</option></select>
+        <p id="space-lens-note" class="lens-caption">Focus one public Space and the exact model/dataset IDs published in its Space card. No inferred dependencies.</p>
+        <label for="vertical">Legacy vertical lens</label>
         <select id="vertical"><option value="all">All visible assets</option><option value="unassigned">Unassigned to legacy verticals</option></select>
         <label class="card-toggle"><input id="include-card-linked" type="checkbox" checked><span>Include public Space-card references<small>Indirect • not vertical membership</small></span></label>
         <div class="rule"></div>
@@ -84,6 +87,7 @@
         <dl id="metadata"><div><dt>Source</dt><dd>Public Hugging Face API</dd></div><div><dt>Authority</dt><dd>None granted</dd></div></dl>
         <div id="linked-assets" aria-label="Source-declared linked public assets"></div>
         <div class="inspector-actions">
+          <button id="focus-space" type="button" hidden>Focus this Space in 3D ⇢</button>
           <a id="open-asset" href="https://huggingface.co/SZLHOLDINGS" target="_blank" rel="noopener noreferrer">Explore on Hugging Face ↗</a>
           <button id="share-selection" type="button">Copy deep link</button>
         </div>
