@@ -44,7 +44,7 @@ def fixture():
     return report
 
 async def main(args):
-    from playwright.async_api import async_playwright
+    from playwright.async_api import async_playwright, expect
     out=args.out.resolve()
     out.mkdir(parents=True,exist_ok=True)
     origin=f"http://127.0.0.1:{args.port}"
@@ -109,13 +109,45 @@ async def main(args):
                             off_origin.append(url.hostname)
                             await route.abort()
                         elif url.path=="/api/atlas/public":
-                            if mode=="ok":
+                            if mode in ("ok","runtime_unavailable","runtime_drift","runtime_overclaim"):
                                 await route.fulfill(status=200,content_type="application/json",body=fixture_json)
                             elif mode=="malicious_card":
                                 await route.fulfill(status=200,content_type="application/json",body=tampered_json)
                             else:
                                 await route.fulfill(status=503,content_type="application/json",
                                     body='{"schema":"szl.public-hub-holographic-atlas/v1","state":"UNAVAILABLE"}')
+                        elif url.path.startswith("/api/atlas/space-runtime/"):
+                            name=url.path.rsplit("/",1)[-1]
+                            if mode in ("runtime_unavailable","runtime_drift"):
+                                status=409 if mode=="runtime_drift" else 503
+                                code="SPACE_SOURCE_CHANGED_SINCE_CENSUS" if status==409 else "ANONYMOUS_HUB_SPACE_INFO_UNAVAILABLE"
+                                await route.fulfill(status=status,content_type="application/json",
+                                    body=json.dumps({"schema":"szl.public-space-runtime-observation/v1",
+                                        "state":"UNAVAILABLE","reason_code":code,"provider_stage":None,
+                                        "production_qualified":False,"execution_authorized":False}))
+                            else:
+                                stage="SLEEPING" if name=="terra" else "RUNNING"
+                                report={"schema":"szl.public-space-runtime-observation/v1",
+                                    "state":"OBSERVED_PROVIDER_RUNTIME_METADATA",
+                                    "evidence_class":"ANONYMOUS_PUBLIC_HUB_SPACE_INFO",
+                                    "space_id":"SZLHOLDINGS/"+name,
+                                    "census_source_revision":"a"*40,
+                                    "observed_source_revision":"a"*40,
+                                    "source_binding":"PUBLIC_CENSUS_SHA_MATCH",
+                                    "provider_stage":stage,
+                                    "provider_hardware":"cpu-basic",
+                                    "observed_at":"2026-11-17T13:00:00Z",
+                                    "runtime_readiness":"NOT_EVALUATED",
+                                    "model_execution":"NOT_EVALUATED",
+                                    "signed_execution_provenance":"NOT_EVALUATED",
+                                    "production_qualified":False,
+                                    "execution_authorized":False,
+                                    "observation_sha256":"f"*64}
+                                if mode=="runtime_overclaim":
+                                    report["production_qualified"]=True
+                                    report["execution_authorized"]=True
+                                await route.fulfill(status=200,content_type="application/json",
+                                    body=json.dumps(report))
                         elif url.path.startswith("/api/"):
                             await route.fulfill(status=503,content_type="application/json",
                                 body='{"state":"UNAVAILABLE"}')
@@ -126,8 +158,8 @@ async def main(args):
                     return context,page,errors,writes,off_origin
                 for width in (1280,375):
                     context,page,errors,writes,off_origin=await open_page(width)
-                    await page.wait_for_function("document.getElementById('count-space').textContent==='7'",timeout=20000)
-                    await page.wait_for_function("document.getElementById('visible-count').textContent.includes('22 visible')",timeout=20000)
+                    await expect(page.locator("#count-space")).to_have_text("7",timeout=20000)
+                    await expect(page.locator("#visible-count")).to_contain_text("22 visible",timeout=20000)
                     await page.wait_for_timeout(350)
                     count=await page.locator("#viewport canvas").count()
                     rendered=count==1 and await page.locator("#viewport canvas").is_visible()
@@ -140,6 +172,11 @@ async def main(args):
                     check(f"{width}: one Space lens per public Space",
                           await page.locator("#space-lens option").count()==8)
                     await page.locator("#space-lens").select_option("SZLHOLDINGS/killinchu")
+                    await expect(page.locator("#runtime-stage")).to_contain_text("RUNNING",timeout=16000)
+                    check(f"{width}: source-fenced provider stage is observed but not readiness",
+                          "RUNNING" in await page.locator("#runtime-stage").inner_text()
+                          and "NOT EVALUATED" in await page.locator("#runtime-source").inner_text()
+                          and await page.locator("#runtime-observation").is_visible())
                     lens_count=int((await page.locator("#visible-count").inner_text()).split()[0])
                     check(f"{width}: single-Space source/card orbit",
                           lens_count==3 and await page.locator("#asset-rows tr").count()==3
@@ -148,13 +185,17 @@ async def main(args):
                           {"visible":lens_count})
                     await page.screenshot(path=str(out/f"atlas-{width}-space-killinchu-synthetic.png"),full_page=True)
                     await page.locator("#space-lens").select_option("SZLHOLDINGS/terra")
+                    await expect(page.locator("#runtime-stage")).to_contain_text("SLEEPING",timeout=16000)
+                    check(f"{width}: sleeping provider stage is NOT promoted to readiness",
+                          "SLEEPING" in await page.locator("#runtime-stage").inner_text()
+                          and "NOT EVALUATED" in await page.locator("#runtime-source").inner_text())
                     orphan_count=int((await page.locator("#visible-count").inner_text()).split()[0])
                     check(f"{width}: Space with no card refs shows no invented edges",
                           orphan_count==1 and await page.locator("#asset-rows tr").count()==1)
                     await page.locator("#space-lens").select_option("all")
                     check(f"{width}: no client error or provider write",not errors and not writes and not off_origin,
                           {"errors":errors,"writes":writes,"off_origin":off_origin})
-                    overflow=await page.evaluate("document.documentElement.scrollWidth>innerWidth+2")
+                    overflow=await page.evaluate("() => document.documentElement.scrollWidth > innerWidth+2")
                     check(f"{width}: no horizontal page overflow",not overflow)
                     await page.screenshot(path=str(out/f"atlas-{width}-public-synthetic.png"),full_page=True)
                     if width==375:
@@ -175,7 +216,7 @@ async def main(args):
                     await context.close()
                 context,page,errors,writes,off_origin=await open_page(
                     1280,query="?space=SZLHOLDINGS/killinchu")
-                await page.wait_for_function("document.getElementById('selected-name').textContent==='killinchu'",timeout=20000)
+                await expect(page.locator("#selected-name")).to_have_text("killinchu",timeout=20000)
                 check("each public Space has a deep-link inspector",await page.locator("#open-asset").get_attribute("href")==
                       "https://huggingface.co/spaces/SZLHOLDINGS/killinchu")
                 check("deep-link automatically enters its exact Space lens",
@@ -183,21 +224,50 @@ async def main(args):
                       and await page.locator("#asset-rows tr").count()==3)
                 check("Space inspector exposes exact public card-referenced assets",
                       await page.locator("#linked-assets button").count()==2)
+                await expect(page.locator("#runtime-stage")).to_contain_text("RUNNING",timeout=16000)
+                check("deep-linked Space receives independent provider-stage readback",
+                      await page.locator("#runtime-observation").is_visible()
+                      and "RUNNING" in await page.locator("#runtime-stage").inner_text())
                 check("focused Space action visibly available",
                       await page.locator("#focus-space").is_visible())
                 await page.get_by_role("button",name="→ [MODEL] Khipu").click()
-                await page.wait_for_function("document.getElementById('selected-name').textContent==='Khipu'",timeout=20000)
+                await expect(page.locator("#selected-name")).to_have_text("Khipu",timeout=20000)
                 check("Space-card model opens source-bound Khipu inspector",
                       await page.locator("#selected-name").inner_text()=="Khipu")
+                check("model selection clears the previous Space runtime observation",
+                      not await page.locator("#runtime-observation").is_visible())
                 await context.close()
                 context,page,errors,writes,off_origin=await open_page(1280,mode="unavailable")
-                await page.wait_for_function("document.getElementById('status').textContent.includes('UNAVAILABLE')",timeout=20000)
+                await expect(page.locator("#status")).to_contain_text("UNAVAILABLE",timeout=20000)
                 check("unavailable API leaves no stale graph or claims",await page.locator("#viewport canvas").count()==0
                       and await page.locator("#fallback").is_visible()
                       and "Live public directory unavailable" in await page.locator("#asset-rows").inner_text())
                 await context.close()
+                context,page,errors,writes,off_origin=await open_page(
+                    1280,mode="runtime_unavailable",query="?space=SZLHOLDINGS/killinchu")
+                await expect(page.locator("#runtime-stage")).to_contain_text("UNAVAILABLE",timeout=16000)
+                check("runtime HTTP failure does not inherit a previous RUNNING stage",
+                      await page.locator("#runtime-observation").is_visible()
+                      and "UNAVAILABLE" in await page.locator("#runtime-stage").inner_text()
+                      and "RUNNING" not in await page.locator("#runtime-stage").inner_text())
+                await context.close()
+                context,page,errors,writes,off_origin=await open_page(
+                    1280,mode="runtime_drift",query="?space=SZLHOLDINGS/killinchu")
+                await expect(page.locator("#runtime-stage")).to_contain_text("REVISION ADVANCED",timeout=16000)
+                check("outdated public census denies provider-stage evidence",
+                      "REVISION ADVANCED" in await page.locator("#runtime-stage").inner_text()
+                      and "Refresh the atlas" in await page.locator("#runtime-source").inner_text())
+                await context.close()
+                context,page,errors,writes,off_origin=await open_page(
+                    1280,mode="runtime_overclaim",query="?space=SZLHOLDINGS/killinchu")
+                await expect(page.locator("#runtime-stage")).to_contain_text(
+                    "UNAVAILABLE",timeout=16000)
+                check("malicious provider runtime success cannot grant execution authority",
+                      "UNAVAILABLE" in await page.locator("#runtime-stage").inner_text()
+                      and "RUNNING" not in await page.locator("#runtime-stage").inner_text())
+                await context.close()
                 context,page,errors,writes,off_origin=await open_page(1280,mode="malicious_card")
-                await page.wait_for_function("document.getElementById('status').textContent.includes('UNAVAILABLE')",timeout=20000)
+                await expect(page.locator("#status")).to_contain_text("UNAVAILABLE",timeout=20000)
                 check("forged Space-card source revision fails closed",
                       await page.locator("#viewport canvas").count()==0
                       and await page.locator("#fallback").is_visible()

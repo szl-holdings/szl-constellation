@@ -16,6 +16,8 @@ from typing import Any
 
 from crosscheck import crosscheck_chains
 from atlas_public import cached_public_atlas
+from atlas_runtime import (RuntimeObservationError, failed_public_observation,
+                           observe_public_space_runtime)
 from presentation import ASSETS as PRESENTATION_ASSETS, read_asset
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -1209,6 +1211,26 @@ def create_app():
                  "production_qualified": False, "execution_authorized": False},
                 status_code=503, headers={"Cache-Control": "no-store",
                                            "X-Content-Type-Options": "nosniff"})
+
+    @app.get("/api/atlas/space-runtime/{space_name}", include_in_schema=False)
+    def api_atlas_space_runtime(space_name: str):
+        """Anonymous Hub Space stage with an exact public-source fence.
+
+        A provider RUNNING stage never establishes readiness or action
+        authority. Lookup errors cannot expose private names or tokens.
+        """
+        headers = {"Cache-Control": "no-store",
+                   "X-Content-Type-Options": "nosniff"}
+        try:
+            return JSONResponse(observe_public_space_runtime(space_name),
+                                headers=headers)
+        except RuntimeObservationError as exc:
+            return JSONResponse(failed_public_observation(exc.reason_code),
+                                status_code=exc.http_status, headers=headers)
+        except Exception:
+            return JSONResponse(failed_public_observation(
+                "UNEXPECTED_PUBLIC_OBSERVATION_FAILURE"),
+                status_code=503, headers=headers)
 
     @app.get("/c2", include_in_schema=False)
     def c2():

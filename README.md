@@ -157,3 +157,15 @@ distinguishable rings; it is not a trained dependency graph or execution
 receipt. Spaces without card references retain an honest one-node view.
 The accessible table and the source-bound inspector use the same selection.
 Native Space applications and deployment permissions are unchanged.
+
+### Public provider-stage witness (separate authority axis)
+
+Selecting any public Space now requests a bounded, anonymous
+`GET /api/atlas/space-runtime/<name>` readback. The server returns its
+public Hugging Face **provider stage** only if a separate SpaceInfo record
+still matches the exact SHA of the Space in the current public atlas census.
+The inspector shows the stage, revision and readback timestamp, always
+labeled **NOT model execution or release readiness**. Missing access, changed
+revision, or invalid metadata fails closed without reusing stale status.
+No credentials or provider mutations are needed. See
+[the atlas evidence protocol](docs/PUBLIC_FRONTIER_ATLAS_20261117.md).

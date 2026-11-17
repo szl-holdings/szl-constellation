@@ -153,3 +153,14 @@ footer a{color:#8bc8d0}
 @media(max-width:800px){
   .rail .lens-caption{grid-column:1/-1;margin:-6px 0 14px}
 }
+
+/* Independently observed public Hugging Face SpaceInfo stage.
+   Never colorize a stage as release authorization or proof of model execution. */
+.runtime-observation{border:1px solid #41516e;border-radius:9px;background:linear-gradient(160deg,#132032,#0d1324);padding:14px 12px;margin:14px 0}
+.runtime-observation .runtime-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.runtime-observation .runtime-top .section-label{margin:0;color:#b1bfdb}
+.runtime-observation .runtime-top button{border:1px solid #477779;border-radius:5px;background:#153237;color:#9ee7e3;padding:2px 9px;font-size:19px;line-height:1.1}
+.runtime-observation strong{font:700 15px/1.2 ui-monospace,monospace;letter-spacing:.04em;color:#a9e5dc;display:block;overflow-wrap:anywhere}
+.runtime-observation strong.runtime-unknown{color:#f6c882}
+.runtime-observation p{font:10px/1.65 ui-monospace,monospace;overflow-wrap:anywhere}
+.runtime-observation .runtime-caveat{color:#d6b474;border-left:2px solid #cfae6e;padding-left:8px;margin:9px 0 0}
