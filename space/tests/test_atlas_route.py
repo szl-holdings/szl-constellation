@@ -1,6 +1,5 @@
 """Actual FastAPI mount and read-only public atlas contract (offline fixtures)."""
 from __future__ import annotations
-import json
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient

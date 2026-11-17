@@ -28,7 +28,7 @@ _HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 _TIERS = ("space", "model", "dataset")
 _limits = {"space": MAX_SPACES, "model": MAX_MODELS, "dataset": MAX_DATASETS}
 _cache_lock = threading.Lock()
-_cache: tuple[float, dict[str, Any]] | None = None
+_cache_state: dict[str, Any] = {"deadline": 0.0, "value": None}
 
 
 class AtlasError(ValueError):
@@ -217,12 +217,12 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
 
 
 def cached_public_atlas() -> dict:
-    global _cache
     with _cache_lock:
         now = time.monotonic()
-        if _cache is not None and now < _cache[0]:
-            return _cache[1]
+        if _cache_state["value"] is not None and now < _cache_state["deadline"]:
+            return _cache_state["value"]
         # Never serve expired cache as live data after a failed refresh.
         result = collect()
-        _cache = (time.monotonic() + CACHE_SECONDS, result)
+        _cache_state["value"] = result
+        _cache_state["deadline"] = time.monotonic() + CACHE_SECONDS
         return result

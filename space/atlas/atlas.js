@@ -20,7 +20,6 @@ let selectedId = null;
 let scene, camera, renderer, controls, mesh, linkLines, halo;
 let rotator = false;
 let animationRequested = true;
-let timer = 0;
 const positions = new Map();
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();

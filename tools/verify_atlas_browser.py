@@ -44,7 +44,6 @@ async def main(args):
     origin=f"http://127.0.0.1:{args.port}"
     fixture_json=json.dumps(fixture(),sort_keys=True)
     checks=[]
-    faults=[]
     def check(name,result,details=None):
         checks.append({"name":name,"pass":bool(result),"detail":details})
     env={k:os.environ[k] for k in ("PATH","SYSTEMROOT","WINDIR") if k in os.environ}
@@ -65,6 +64,7 @@ async def main(args):
                     if resp.status==200:
                         ready=True;break
                 except OSError:
+                    # The ASGI listener is still starting; use the bounded backoff below.
                     pass
                 finally:connection.close()
                 await asyncio.sleep(.25)

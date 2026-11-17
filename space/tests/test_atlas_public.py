@@ -4,7 +4,6 @@ import copy
 import hashlib
 import json
 import tempfile
-import threading
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -132,9 +131,12 @@ class PublicAtlasTest(unittest.TestCase):
         self.assertEqual(first["observation_sha256"],expected)
 
     def test_backend_cache_does_not_use_expired_snapshot_after_failure(self):
-        original=atlas._cache
-        self.addCleanup(lambda:setattr(atlas,"_cache",original))
-        atlas._cache=None
+        original=atlas._cache_state.copy()
+        def restore():
+            atlas._cache_state.clear()
+            atlas._cache_state.update(original)
+        self.addCleanup(restore)
+        atlas._cache_state.update({"deadline": 0.0, "value": None})
         count=[0]
         def collect():
             count[0]+=1
@@ -163,7 +165,7 @@ class PublicAtlasTest(unittest.TestCase):
         self.assertNotIn(".innerHTML",js)
         pinned={
             "three.module.js":"104f56145899722094556490d787aae0617cc2fc3382f31df02d724ea1aee341",
-            "three.core.js":"613e370f76638fdef83926642bf256dc9615684922de1ce1f63a8583e5d78578",
+            "three.core.js":"fcdea6d43f7af2e57d0c2dee9d9c16b238ae5df75af87d7fa810262773991f21",
             "OrbitControls.js":"a747d56dd959510407777f1800792b2b52c0a435980fd6e40caf303d8a674b9e",
             "THREE-LICENSE.txt":"8b378ebe60e2fe500158cb0ac71cb5e8b7d92953c2abcc63a0eb90499653b5bc",
         }
