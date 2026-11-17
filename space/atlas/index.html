@@ -48,12 +48,18 @@
         <input id="search" type="search" autocomplete="off" placeholder="Search public names or tags…" maxlength="128">
         <label for="vertical">Vertical lens</label>
         <select id="vertical"><option value="all">All visible assets</option><option value="unassigned">Unassigned to legacy verticals</option></select>
+        <label class="card-toggle"><input id="include-card-linked" type="checkbox" checked><span>Include public Space-card references<small>Indirect • not vertical membership</small></span></label>
         <div class="rule"></div>
         <div class="section-label">02 / VISIBLE LAYERS</div>
         <label class="switch"><input type="checkbox" value="space" checked><span class="dot space"></span> Spaces</label>
         <label class="switch"><input type="checkbox" value="model" checked><span class="dot model"></span> Models</label>
         <label class="switch"><input type="checkbox" value="dataset" checked><span class="dot dataset"></span> Datasets</label>
         <label class="switch"><input type="checkbox" value="vertical" checked><span class="dot vertical"></span> Verticals</label>
+        <div class="edge-legend" aria-label="Relationship provenance">
+          <div><span class="edge-swatch declared"></span> DATED VERTICAL LINK</div>
+          <div><span class="edge-swatch card"></span> PUBLIC SPACE CARD LINK</div>
+          <small>No line proves a running dependency.</small>
+        </div>
         <div class="rule"></div>
         <div class="section-label">03 / NAVIGATION</div>
         <button id="reset" type="button">Reset camera <span>⌂</span></button>
@@ -63,7 +69,7 @@
       </aside>
 
       <div class="viewport" id="viewport" role="region" aria-label="Interactive three-dimensional asset graph">
-        <div class="viewport-top"><span class="live-pip"></span> SOURCE-BOUND METADATA GRAPH <span class="right">3D / WEBGL</span></div>
+        <div class="viewport-top"><span class="live-pip"></span> SOURCE-BOUND METADATA GRAPH <span class="right"><span id="card-link-count">—</span> CARD LINKS · 3D / WEBGL</span></div>
         <div class="viewport-bottom"><strong id="view-message">Initializing public observatory…</strong><span id="visible-count">— visible</span></div>
         <div class="crosshair" aria-hidden="true"></div>
         <div id="fallback" class="fallback" hidden><h2>3D renderer unavailable</h2><p>The directory is still available below. No simulated graph is substituted for WebGL.</p><a href="#directory">Open the directory</a></div>
@@ -76,6 +82,7 @@
         <h2 id="selected-name">Select any point of light.</h2>
         <p id="selected-sub">The inspector keeps publicly listed metadata distinct from the historical vertical taxonomy and from actual runtime qualification.</p>
         <dl id="metadata"><div><dt>Source</dt><dd>Public Hugging Face API</dd></div><div><dt>Authority</dt><dd>None granted</dd></div></dl>
+        <div id="linked-assets" aria-label="Source-declared linked public assets"></div>
         <div class="inspector-actions">
           <a id="open-asset" href="https://huggingface.co/SZLHOLDINGS" target="_blank" rel="noopener noreferrer">Explore on Hugging Face ↗</a>
           <button id="share-selection" type="button">Copy deep link</button>

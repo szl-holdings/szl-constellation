@@ -48,3 +48,50 @@ repository, not an authority or a new publisher.
   (run from `space/`), render via `tools/verify_atlas_browser.py` in the
   existing Playwright CI environment. Browser fixtures are marked synthetic
   and do not represent live providers.
+
+## Live public Space-card reference graph (2026-11-17 extension)
+
+The atlas now distinguishes TWO entirely separate provenance classes:
+
+1. `DECLARED_MEMBERSHIP_MATCHED_TO_PUBLIC_HUB`: source-listed
+   September 2026 vertical membership matched to an anonymously listed public
+   Hub resource. This is **not a currently qualified vertical runtime**.
+2. `PUBLIC_SPACE_CARD_REFERENCES_MODEL` /
+   `PUBLIC_SPACE_CARD_REFERENCES_DATASET`: explicit model/dataset IDs
+   published in the anonymous public Space card, matched independently
+   against the public model or dataset census. The link includes the Space's
+   exact Hub source SHA and is labeled
+   `CARD_DECLARATION_NOT_EXECUTED_DEPENDENCY`. It does not establish that
+   a model was loaded, that dataset rows were used, that training happened,
+   or that either asset belongs to a historical vertical.
+
+Source collection calls `HfApi(token=False).list_spaces(author="SZLHOLDINGS",
+full=True,linked=True,token=False)` plus independently scoped anonymous
+model/dataset lists. A card references an asset only if the exact same-org
+ID is present and independently public; external, nonpublic, malformed and
+ambiguous IDs are never disclosed or relabeled.
+
+The browser renders dated vertical edges as SOLID cyan and public card
+references as DASHED lilac. The evidence inspector lets the user follow
+exact matched Space-card references. The optional "Include public
+Space-card references" vertical lens reveals *indirectly connected*
+assets without changing their dated membership. The directory explicitly
+calls such rows "Via public Space card — NOT vertical membership".
+All links remain read-only and neither type establishes action authority.
+
+First source probe in this campaign: 33 anonymously listed public Spaces,
+147 public models, 93 public datasets, and **36** independent exact public
+Space-card links (20 model, 16 dataset) at
+2026-11-17 ~09:45 UTC. Counts are observations, not constants.
+
+Verification: the Python suite covers malformed card metadata, duplicate
+references, foreign references, nonpublic resources, oversize lists,
+missing source SHA, no extra vertical memberships, and digest changes.
+Chromium tests render both edge styles, toggle the indirect vertical
+lens, traverse a source-linked model from a Space inspector, and reject
+a forged source SHA without rendering fake evidence.
+
+External references: Hugging Face Hub `list_spaces(linked=True)`
+documentation and Space Card metadata guide. No open-source code copied
+to produce the edge semantics: the Python and JS graph projection is
+original SZL implementation using existing vendored, MIT-licensed Three.js.

@@ -133,3 +133,15 @@ asset is addressable by its exact Hub identifier, not a hardcoded shortlist.
 
 Architecture, sources, privacy tests, failure modes and open-source review:
 [Public Frontier Atlas design](docs/PUBLIC_FRONTIER_ATLAS_20261117.md).
+
+### Source-pinned public Space-card relationships
+
+The atlas also now draws DASHED lilac Space→model and Space→dataset links
+declared by current public Hugging Face Space cards and independently matched
+to public Hub assets. SOLID cyan edges remain dated, source-declared vertical
+membership. The vertical lens can optionally include indirectly linked public
+resources without silently reclassifying them as members. The inspector lets
+users follow exact referenced public resources, with the Space's source SHA
+recorded for each card edge. None of this establishes model loading,
+training, data usage, signed receipts, deployment readiness, or permission to
+act. See [atlas provenance design](docs/PUBLIC_FRONTIER_ATLAS_20261117.md).
