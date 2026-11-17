@@ -17,6 +17,8 @@ let snapshot = null;
 let nodes = [];
 let visible = [];
 let selectedId = null;
+let runtimeGeneration = 0;
+let runtimeController = null;
 let scene, camera, renderer, controls, mesh, linkLines = [], halo;
 let rotator = false;
 let animationRequested = true;
@@ -335,10 +337,96 @@ function showSelected(node) {
     ? 'Explore this vertical lens ↗' : 'Open official Hugging Face asset ↗';
 }
 
+function observeSelectedSpaceRuntime(node) {
+  // Each selection gets a generation fence; out-of-order or aborted network
+  // responses cannot turn a previous Space's stage into this Space's stage.
+  runtimeGeneration += 1;
+  const generation = runtimeGeneration;
+  if (runtimeController) runtimeController.abort();
+  runtimeController = null;
+  const panel = $('runtime-observation');
+  const stageLabel = $('runtime-stage');
+  const sourceLabel = $('runtime-source');
+  const isPublicSpace = node?.kind === 'space'
+    && typeof node.hub_id === 'string'
+    && /^SZLHOLDINGS\/[A-Za-z0-9_.-]{1,128}$/.test(node.hub_id)
+    && strictSha(node.source_revision);
+  panel.hidden = !isPublicSpace;
+  stageLabel.className = 'runtime-unknown';
+  if (!isPublicSpace) {
+    stageLabel.textContent = 'NOT OBSERVED';
+    sourceLabel.textContent = 'No public Space selected.';
+    return;
+  }
+  stageLabel.textContent = 'CHECKING PUBLIC PROVIDER STAGE';
+  sourceLabel.textContent = 'Independent anonymous Hub readback; source revision must match the public atlas census.';
+  const controller = new AbortController();
+  runtimeController = controller;
+  const token = node.hub_id.slice('SZLHOLDINGS/'.length);
+  const clock = setTimeout(() => controller.abort(), 15000);
+  fetch('/api/atlas/space-runtime/' + encodeURIComponent(token), {
+    method: 'GET', cache: 'no-store', credentials: 'omit',
+    headers: {Accept: 'application/json'}, signal: controller.signal
+  }).then(async response => {
+    // Never surface untrusted upstream error bodies to the public DOM.
+    const report = await response.json();
+    if (runtimeGeneration !== generation || selectedId !== node.id
+        || controller.signal.aborted) return;
+    if (!response.ok) {
+      const drift = report.reason_code === 'SPACE_SOURCE_CHANGED_SINCE_CENSUS';
+      stageLabel.textContent = drift ? 'REVISION ADVANCED' : 'PROVIDER STAGE UNAVAILABLE';
+      sourceLabel.textContent = drift
+        ? 'The public Space revision changed during observation. Refresh the atlas to rebind source.'
+        : 'Anonymous Hub status is unavailable or not admitted. No previous observation is reused.';
+      return;
+    }
+    const valid = report.schema === 'szl.public-space-runtime-observation/v1'
+      && report.state === 'OBSERVED_PROVIDER_RUNTIME_METADATA'
+      && report.evidence_class === 'ANONYMOUS_PUBLIC_HUB_SPACE_INFO'
+      && report.space_id === node.hub_id
+      && report.census_source_revision === node.source_revision
+      && report.observed_source_revision === node.source_revision
+      && report.source_binding === 'PUBLIC_CENSUS_SHA_MATCH'
+      && typeof report.provider_stage === 'string'
+      && /^[A-Z][A-Z_]{1,31}$/.test(report.provider_stage)
+      && typeof report.observed_at === 'string'
+      && report.runtime_readiness === 'NOT_EVALUATED'
+      && report.model_execution === 'NOT_EVALUATED'
+      && report.signed_execution_provenance === 'NOT_EVALUATED'
+      && report.production_qualified === false
+      && report.execution_authorized === false
+      && typeof report.observation_sha256 === 'string'
+      && /^[0-9a-f]{64}$/.test(report.observation_sha256);
+    if (!valid) throw new Error('UNVERIFIED_RUNTIME_RESPONSE');
+    stageLabel.textContent = 'HF PROVIDER STAGE: ' + report.provider_stage;
+    stageLabel.className = report.provider_stage === 'RUNNING' ? '' : 'runtime-unknown';
+    sourceLabel.textContent = 'Public Hub revision ' + node.source_revision.slice(0, 12)
+      + ' · observed ' + report.observed_at
+      + (typeof report.provider_hardware === 'string'
+          ? ' · declared hardware ' + report.provider_hardware : '')
+      + ' · independent runtime readiness NOT EVALUATED.';
+  }).catch(() => {
+    if (runtimeGeneration !== generation || selectedId !== node.id
+        || controller.signal.aborted) return;
+    stageLabel.textContent = 'PROVIDER STAGE UNAVAILABLE';
+    stageLabel.className = 'runtime-unknown';
+    sourceLabel.textContent = 'The public status observation failed validation. No stale stage is substituted.';
+  }).finally(() => {
+    clearTimeout(clock);
+    if (runtimeController === controller) runtimeController = null;
+    if (runtimeGeneration === generation && selectedId === node.id && controller.signal.aborted) {
+      stageLabel.textContent = 'PROVIDER STAGE UNAVAILABLE';
+      stageLabel.className = 'runtime-unknown';
+      sourceLabel.textContent = 'Public readback timed out; no stale status is promoted.';
+    }
+  });
+}
+
 function choose(id) {
   selectedId=id;
   const node = nodes.find(n=>n.id===id);
   showSelected(node);
+  observeSelectedSpaceRuntime(node);
   if (halo) {
     halo.visible=!!node;
     if(node) {halo.position.copy(positions.get(node.id));halo.material.color.setHex(COLORS[node.kind]);}
@@ -602,6 +690,10 @@ $('space-lens').addEventListener('change',()=>{
   }
   choose('space:'+space);
   frameVisibleGraph();
+});
+$('runtime-refresh').addEventListener('click',()=>{
+  const node=nodes.find(item => item.id===selectedId);
+  if (node?.kind === 'space') observeSelectedSpaceRuntime(node);
 });
 $('focus-space').addEventListener('click',()=>{
   const item=nodes.find(node=>node.id===selectedId);

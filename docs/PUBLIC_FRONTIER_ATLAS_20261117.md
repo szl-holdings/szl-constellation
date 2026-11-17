@@ -136,3 +136,47 @@ Verification includes isolated Playwright tests at desktop and mobile widths
 for exact Space dropdown membership, source/card visibility, empty-card
 behavior, direct-deep-link focus, interactive inspector, and safe fallback,
 plus the existing python privacy and artifact-boundary tests.
+
+## Independent provider-stage witness (2026-11-17)
+
+Per-Space holographic lenses now support an *on-demand* second source of
+evidence: one anonymous Hugging Face public SpaceInfo readback. The
+`/api/atlas/space-runtime/{space_name}` route first admits the exact
+`SZLHOLDINGS/<name>` identifier through the already-fetched, anonymous
+public atlas census, then performs a separate
+`HfApi(token=False).space_info(repo_id, timeout=10, token=False)` read.
+
+It only reports the observed provider stage if all three bindings match:
+(1) the entity is a public Space in the census; (2) the new Hub SpaceInfo
+record still identifies the same public, nonprivate Space; and (3) its
+40-character repository SHA is **identical** to the previously listed
+public revision. Thus a 5-minute census that becomes outdated cannot
+silently attach a different version's runtime stage to the selected node.
+A revision change returns HTTP 409 and
+`SPACE_SOURCE_CHANGED_SINCE_CENSUS`, not a stale-stage success.
+
+The route has bounded exact same-org identifiers, no caller-controlled URL,
+no public credentials and no provider mutations. Its safe anonymous record
+provides **provider stage** (e.g. RUNNING, SLEEPING, BUILDING), optionally
+declared hardware, both matching source revisions, timestamp, and an
+unsigned observation fingerprint. The frontend rejects mismatched source,
+identity, schema, or claimed execution authority; it cancels and fences
+in-flight observations when the user selects another node.
+
+**CRITICAL DISTINCTION:** A Hub provider's RUNNING stage is **NOT** a
+service-health check, live inference probe, signed execution receipt,
+model quality evaluation, dataset-use proof, release authorization, or
+production qualification. All these remain `NOT_EVALUATED` or `false`.
+An upstream 401/403/429, malformed stage or Hub error causes a safe generic
+UNAVAILABLE result; private and nonexistent IDs are not enumerated.
+Neither a previously observed stage nor a stale source match is reused.
+
+The local browser uses synthetic run-state fixtures to verify RUNNING and
+SLEEPING as distinct *metadata* observations, denial of stale SHA,
+timeout/error fallback, clear-on-model-selection, and no provider writes.
+A separate read-only production-browser smoke must be run against the
+published source after the canonical publisher succeeds.
+
+References: Hugging Face
+[Space runtime](https://huggingface.co/docs/huggingface_hub/en/package_reference/space_runtime)
+and [HfApi space_info](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api).
