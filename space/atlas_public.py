@@ -21,6 +21,8 @@ from urllib.parse import quote
 ORG = "SZLHOLDINGS"
 SCHEMA = "szl.public-hub-holographic-atlas/v1"
 MAX_SPACES, MAX_MODELS, MAX_DATASETS = 200, 400, 300
+MAX_CARD_REFERENCES_PER_KIND = 128
+MAX_PUBLIC_GRAPH_LINKS = 2000
 CACHE_SECONDS = 300
 ROOT = Path(__file__).resolve().parent
 _ALLOWED_NAME = re.compile(r"[A-Za-z0-9_.-]{1,128}\Z")
@@ -85,6 +87,28 @@ def _sanitize(item: Any, kind: str) -> dict | None:
     }
 
 
+def _public_card_ids(item: Any, kind: str) -> list[str]:
+    """Return *only* same-org IDs explicitly named in a public Space card.
+
+    This raw data remains internal. An ID is exposed only if the independent
+    anonymous model/dataset list also names the resource as public.
+    """
+    field = {"model": "models", "dataset": "datasets"}[kind]
+    listed = getattr(item, field, None)
+    if listed is None:
+        return []
+    if not isinstance(listed, (list, tuple)) or len(listed) > MAX_CARD_REFERENCES_PER_KIND:
+        raise AtlasError("PUBLIC_SPACE_CARD_RELATION_SET_INVALID")
+    result = set()
+    for name in listed:
+        if not isinstance(name, str):
+            raise AtlasError("PUBLIC_SPACE_CARD_RELATION_TYPE_INVALID")
+        org, separator, tail = name.partition("/")
+        if separator and org == ORG and _ALLOWED_NAME.fullmatch(tail):
+            result.add(name)
+    return sorted(result)
+
+
 def _topology(path: Path) -> tuple[list[dict], str | None]:
     """Read dated canonical topology without trusting its asset existence."""
     doc = json.loads(path.read_text(encoding="utf-8"))
@@ -138,9 +162,15 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
             fn = {"space": api.list_spaces,
                   "model": api.list_models,
                   "dataset": api.list_datasets}[kind]
+            if kind == "space":
+                # HF's published Space card references; never a runtime
+                # dependency or proof that a model was loaded by a Space.
+                return list(fn(author=ORG, limit=limit, full=True,
+                               linked=True, token=False))
             return list(fn(author=ORG, limit=limit, full=True, token=False))
     topo, topology_stamp = _topology(topology_path or ROOT / "verticals.json")
     output = {}
+    card_relations: dict[str, dict[str, list[str]]] = {}
     # Three independent API calls run concurrently. A partial failure denies
     # the entire graph, rather than silently turning it into a complete estate.
     with ThreadPoolExecutor(max_workers=3) as pool:
@@ -150,6 +180,13 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
             if type(candidates) is not list or len(candidates) >= _limits[kind]:
                 raise AtlasError("INCOMPLETE_PUBLIC_LIST_" + kind.upper())
             clean = [_sanitize(item, kind) for item in candidates]
+            if kind == "space":
+                for item, admitted in zip(candidates, clean):
+                    if admitted is not None and admitted["source_revision"] is not None:
+                        card_relations[admitted["id"]] = {
+                            "model": _public_card_ids(item, "model"),
+                            "dataset": _public_card_ids(item, "dataset"),
+                        }
             values = sorted((x for x in clean if x is not None), key=lambda x:x["hub_id"])
             if len({x["id"] for x in values}) != len(values):
                 raise AtlasError("DUPLICATE_PUBLIC_ID")
@@ -181,6 +218,26 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
             "members_public": len(set(matched)),
             "execution_authorized": False,
         })
+    # Public Hub card references form a SECOND, distinguishable edge class.
+    # They do not promote assets into the historical vertical membership set.
+    card_link_count = 0
+    for source_id, kinds in sorted(card_relations.items()):
+        source = lookup[source_id]
+        for target_kind in ("model", "dataset"):
+            for target_hub_id in kinds[target_kind]:
+                target_id = target_kind + ":" + target_hub_id
+                if target_id not in lookup:
+                    continue  # Private, inaccessible and external IDs are withheld.
+                links.append({
+                    "source": source_id,
+                    "target": target_id,
+                    "kind": "PUBLIC_SPACE_CARD_REFERENCES_" + target_kind.upper(),
+                    "evidence_state": "CARD_DECLARATION_NOT_EXECUTED_DEPENDENCY",
+                    "source_revision": source["source_revision"],
+                })
+                card_link_count += 1
+    if len(links) > MAX_PUBLIC_GRAPH_LINKS:
+        raise AtlasError("PUBLIC_GRAPH_LINK_LIMIT_EXCEEDED")
     for node in nodes:
         node["verticals"].sort()
     counts = {kind:len(output[kind]) for kind in _TIERS}
@@ -195,6 +252,8 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
         "declared_verticals": len(vertical_rows),
         "topology_generated_at": topology_stamp,
         "topology_state": "HISTORICAL_DECLARED_RELATIONSHIPS",
+        "card_link_count": card_link_count,
+        "card_link_evidence": "PUBLIC_SPACE_CARD_REFERENCE_NOT_RUNTIME_DEPENDENCY",
         "nodes": vertical_rows + nodes,
         "links": links,
         "private_assets_excluded": True,
@@ -204,7 +263,8 @@ def collect(*, lister: Callable[[str, int], list[Any]] | None = None,
         "execution_authorized": False,
         "limits": [
             "Public Hugging Face metadata is observed, not a verified deployment or model quality score.",
-            "Only relations explicitly named in the dated vertical registry and visible in public metadata are drawn.",
+            "Historical vertical links are only dated declarations matched to public Hub IDs.",
+            "Space-to-model/dataset edges reflect exact public Space card references, not inference or runtime dependencies.",
             "Nonpublic resources are never emitted or counted in this public response.",
             "No model weights or dataset rows were downloaded and no training was performed.",
             "The SHA-256 fingerprint detects changed bytes, not origin authentication.",

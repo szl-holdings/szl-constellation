@@ -17,10 +17,11 @@ let snapshot = null;
 let nodes = [];
 let visible = [];
 let selectedId = null;
-let scene, camera, renderer, controls, mesh, linkLines, halo;
+let scene, camera, renderer, controls, mesh, linkLines = [], halo;
 let rotator = false;
 let animationRequested = true;
 const positions = new Map();
+let cardTargetsByVertical = new Map();
 const ray = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
@@ -50,10 +51,31 @@ function validate(payload) {
       || new Set(payload.nodes.map(n => n.id)).size !== payload.nodes.length) {
     throw new Error('Atlas evidence schema or privacy boundary invalid');
   }
-  const ids = new Set(payload.nodes.map(n => n.id));
-  if (!payload.links.every(l => ids.has(l.source) && ids.has(l.target)
-      && l.kind === 'DECLARED_MEMBERSHIP_MATCHED_TO_PUBLIC_HUB')) {
-    throw new Error('Unverified topology edge');
+  const byId = new Map(payload.nodes.map(n => [n.id, n]));
+  const cardEdges = payload.links.filter(edge => edge.kind?.startsWith('PUBLIC_SPACE_CARD_'));
+  if (!Number.isInteger(payload.card_link_count)
+      || payload.card_link_count !== cardEdges.length
+      || payload.card_link_evidence !== 'PUBLIC_SPACE_CARD_REFERENCE_NOT_RUNTIME_DEPENDENCY') {
+    throw new Error('Unverified public card-link accounting');
+  }
+  if (!payload.links.every(edge => {
+    const source=byId.get(edge.source), target=byId.get(edge.target);
+    if (!source || !target) return false;
+    if (edge.kind === 'DECLARED_MEMBERSHIP_MATCHED_TO_PUBLIC_HUB') {
+      return source.kind === 'vertical' && target.kind !== 'vertical'
+        && edge.evidence_state === 'DATED_TOPOLOGY_NOT_RUNTIME_EDGE';
+    }
+    if (edge.kind === 'PUBLIC_SPACE_CARD_REFERENCES_MODEL'
+        || edge.kind === 'PUBLIC_SPACE_CARD_REFERENCES_DATASET') {
+      const kind = edge.kind === 'PUBLIC_SPACE_CARD_REFERENCES_MODEL' ? 'model' : 'dataset';
+      return source.kind === 'space' && target.kind === kind
+        && strictSha(source.source_revision)
+        && edge.source_revision === source.source_revision
+        && edge.evidence_state === 'CARD_DECLARATION_NOT_EXECUTED_DEPENDENCY';
+    }
+    return false;
+  })) {
+    throw new Error('Unverified topology or card-reference edge');
   }
   for (const kind of ['space','model','dataset']) {
     if (!Number.isInteger(payload.counts?.[kind])
@@ -85,10 +107,27 @@ function short(v) { return strictSha(v) ? v.slice(0,12) : 'NOT OBSERVED'; }
 function labelForKind(kind) {
   return {vertical:'VERTICAL',space:'SPACE',model:'MODEL',dataset:'DATASET'}[kind] || 'UNKNOWN';
 }
+function isCardEdge(edge) {
+  return edge.kind === 'PUBLIC_SPACE_CARD_REFERENCES_MODEL'
+    || edge.kind === 'PUBLIC_SPACE_CARD_REFERENCES_DATASET';
+}
+function indexIndirectCardTargets() {
+  cardTargetsByVertical = new Map();
+  const byId = new Map(nodes.map(n => [n.id, n]));
+  for (const link of snapshot.links.filter(isCardEdge)) {
+    const space = byId.get(link.source);
+    for (const vertical of space.verticals) {
+      if (!cardTargetsByVertical.has(vertical)) cardTargetsByVertical.set(vertical, new Set());
+      cardTargetsByVertical.get(vertical).add(link.target);
+    }
+  }
+}
 
 function emitData(data) {
   snapshot = validate(data);
   nodes = data.nodes;
+  indexIndirectCardTargets();
+  $('card-link-count').textContent = String(data.card_link_count);
   $('count-space').textContent = data.counts.space;
   $('count-model').textContent = data.counts.model;
   $('count-dataset').textContent = data.counts.dataset;
@@ -117,9 +156,15 @@ function passes(node) {
   if (!types.includes(node.kind)) return false;
   const choice = $('vertical').value;
   if (choice === 'unassigned' && (node.kind === 'vertical' || node.verticals.length !== 0)) return false;
-  if (choice !== 'all' && choice !== 'unassigned'
-      && (node.kind === 'vertical' ? node.vertical_id !== choice
-        : !node.verticals.includes(choice))) return false;
+  if (choice !== 'all' && choice !== 'unassigned') {
+    const direct = node.kind === 'vertical'
+      ? node.vertical_id === choice
+      : node.verticals.includes(choice);
+    const indirect = $('include-card-linked').checked
+      && node.kind !== 'vertical'
+      && cardTargetsByVertical.get(choice)?.has(node.id) === true;
+    if (!direct && !indirect) return false;
+  }
   const query = $('search').value.trim().toLowerCase();
   if (!query) return true;
   const fields = [node.label, node.kind, node.domain || '', node.hub_id || '',
@@ -135,7 +180,7 @@ function updateTable() {
     const bKind = b.kind === 'vertical' ? -1 : ['space','model','dataset'].indexOf(b.kind);
     return aKind-bKind || a.label.localeCompare(b.label);
   });
-  $('directory-result').textContent = current.length + ' matching public or dated-declared nodes. Assets with no declared vertical are not silently assigned.';
+  $('directory-result').textContent = current.length + ' matching public or dated-declared nodes. Indirect card references are not promoted to vertical membership.';
   const fragment = document.createDocumentFragment();
   for (const item of current) {
     const tr = document.createElement('tr');
@@ -151,8 +196,13 @@ function updateTable() {
     a.textContent = item.label;
     title.appendChild(a);
     const category = make('td','',labelForKind(item.kind));
+    const choice = $('vertical').value;
+    const indirectHere = choice !== 'all' && choice !== 'unassigned'
+      && item.kind !== 'vertical' && !item.verticals.includes(choice)
+      && cardTargetsByVertical.get(choice)?.has(item.id) === true;
     const vertical = make('td','',
       item.kind === 'vertical' ? 'Legacy declared group' :
+      indirectHere ? 'Via public Space card — NOT vertical membership' :
       item.verticals.length ? item.verticals.join(', ') : 'Unassigned in dated topology');
     const provenance = make('td','',evidenceText(item));
     tr.append(title,category,vertical,provenance);
@@ -192,6 +242,8 @@ function showSelected(node) {
   const kind = $('selected-kind'), name = $('selected-name'), sub = $('selected-sub');
   const dl = $('metadata');
   dl.replaceChildren();
+  const related = $('linked-assets');
+  related.replaceChildren();
   if (!node) {
     kind.textContent='NO ENTITY SELECTED';name.textContent='Select any point of light.';
     sub.textContent='Click a node or select from the directory; private resources are not in the public graph.';
@@ -216,6 +268,35 @@ function showSelected(node) {
     const row=make('div');
     row.append(make('dt','',k),make('dd','',v));
     dl.appendChild(row);
+  }
+  const cardEdges = snapshot.links.filter(edge => isCardEdge(edge)
+    && (edge.source === node.id || edge.target === node.id));
+  if (cardEdges.length) {
+    related.appendChild(make('h3','','PUBLIC SPACE-CARD REFERENCES · '+cardEdges.length));
+    related.appendChild(make('p','',
+      'Public card metadata only; links do not establish a loaded model, runtime dependency, or vertical membership.'));
+    for (const edge of cardEdges.slice(0,16)) {
+      const otherId = edge.source === node.id ? edge.target : edge.source;
+      const other = nodes.find(n => n.id === otherId);
+      if (!other) continue;
+      const button = make('button','',
+        (edge.source === node.id ? '→ ' : '← ') +
+        '[' + labelForKind(other.kind) + '] ' + other.label);
+      button.type = 'button';
+      button.addEventListener('click', () => {
+        const index = nodes.findIndex(n => n.id === other.id);
+        if (!visible[index]) {
+          $('vertical').value='all';
+          $('search').value='';
+          for (const input of document.querySelectorAll('.switch input')) input.checked = true;
+          filterAndRender();
+        }
+        choose(other.id);
+      });
+      related.appendChild(button);
+    }
+    if (cardEdges.length > 16) related.appendChild(make('p','',
+      '+'+(cardEdges.length-16)+' additional public card links available in evidence JSON.'));
   }
   $('open-asset').href = node.url || ('?vertical='+encodeURIComponent(node.vertical_id));
   $('open-asset').textContent = node.kind === 'vertical'
@@ -275,24 +356,35 @@ function stablePositions() {
 
 function buildEdges() {
   if (!scene) return;
-  if(linkLines) {
-    scene.remove(linkLines);
-    linkLines.geometry.dispose();
-    linkLines.material.dispose();
+  for (const line of linkLines) {
+    scene.remove(line);
+    line.geometry.dispose();
+    line.material.dispose();
   }
+  linkLines = [];
   const idIndex=new Map(nodes.map((n,i)=>[n.id,i]));
-  const coords=[];
-  for(const edge of snapshot.links) {
+  const coords={declared:[],card:[]};
+  for (const edge of snapshot.links) {
+    const card = isCardEdge(edge);
+    if (card && !$('include-card-linked').checked) continue;
     const ai=idIndex.get(edge.source),bi=idIndex.get(edge.target);
     if(ai===undefined||bi===undefined||!visible[ai]||!visible[bi])continue;
     const a=positions.get(edge.source),b=positions.get(edge.target);
-    coords.push(a.x,a.y,a.z,b.x,b.y,b.z);
+    (card ? coords.card : coords.declared).push(a.x,a.y,a.z,b.x,b.y,b.z);
   }
-  const geo=new THREE.BufferGeometry();
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));
-  linkLines=new THREE.LineSegments(geo,
-    new THREE.LineBasicMaterial({color:0x66c7d8,transparent:true,opacity:.35,depthWrite:false}));
-  scene.add(linkLines);
+  for (const kind of ['declared','card']) {
+    if (!coords[kind].length) continue;
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.Float32BufferAttribute(coords[kind],3));
+    const material = kind === 'card'
+      ? new THREE.LineDashedMaterial({color:0xba9bff,transparent:true,opacity:.55,
+          depthWrite:false,dashSize:.75,gapSize:1.15})
+      : new THREE.LineBasicMaterial({color:0x66c7d8,transparent:true,opacity:.35,depthWrite:false});
+    const line=new THREE.LineSegments(geo,material);
+    if (kind === 'card') line.computeLineDistances();
+    linkLines.push(line);
+    scene.add(line);
+  }
 }
 
 function install3D() {
@@ -412,6 +504,7 @@ function handleError(error) {
 }
 
 for(const input of document.querySelectorAll('.switch input'))input.addEventListener('change',filterAndRender);
+$('include-card-linked').addEventListener('change',filterAndRender);
 $('search').addEventListener('input',filterAndRender);
 $('vertical').addEventListener('change',()=>{
   filterAndRender();choose(null);
