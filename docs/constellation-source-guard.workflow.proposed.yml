@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: Apache-2.0
+name: Constellation source guard (offline PR, manual drift only)
+
+on:
+  pull_request:
+    paths:
+      - tools/constellation_source_guard.py
+      - tests/test_constellation_source_guard.py
+      - docs/CONSTELLATION_SOURCE_GUARD_20261120.md
+      - .github/workflows/constellation-source-guard.yml
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Read-only target (no credentials needed to identify publicly exposed staging)
+        type: choice
+        required: true
+        default: production
+        options:
+          - production
+          - staging
+
+permissions:
+  contents: read
+
+jobs:
+  source-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Check out source-only candidate or current protected main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Run offline negative controls
+        run: |
+          python -B -m unittest discover -s tests -p 'test_constellation_source_guard.py' -v
+          python -B tools/constellation_source_guard.py --mode offline
+
+      - name: Observe immutable Hub source (manual dispatch ONLY)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CONSTELLATION_HF_READ_TOKEN: ${{ secrets.CONSTELLATION_HF_READ_TOKEN }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          python -B tools/constellation_source_guard.py \
+            --mode live --target "$TARGET" \
+            --source-sha "$(git rev-parse HEAD)" \
+            --out "$RUNNER_TEMP/constellation-drift-observation.json"
+
+      - name: Retain unsigned observation (manual only)
+        if: always() && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: constellation-manual-drift-${{ github.run_id }}
+          path: ${{ runner.temp }}/constellation-drift-observation.json
+          if-no-files-found: warn
+          retention-days: 14
