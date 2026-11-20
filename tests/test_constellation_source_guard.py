@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Offline adversarial tests for Constellation's advisory source guard."""
 import hashlib
-import io
 import json
 import sys
 import unittest
