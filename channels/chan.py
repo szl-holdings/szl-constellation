@@ -29,6 +29,7 @@ No status claims are made about any other pull request.
 
 from __future__ import annotations
 
+import math
 import time
 from collections import deque
 from typing import Dict, Optional
@@ -48,8 +49,17 @@ class Channel:
                  clock=None):
         if not isinstance(max_queue, int) or isinstance(max_queue, bool) or max_queue < 1:
             raise ChannelError("max_queue must be a positive int")
-        if not stale_window_s or stale_window_s <= 0:
-            raise ChannelError("stale_window_s must be positive")
+        try:
+            valid_window = (
+                isinstance(stale_window_s, (int, float))
+                and not isinstance(stale_window_s, bool)
+                and stale_window_s > 0
+                and math.isfinite(stale_window_s)
+            )
+        except (OverflowError, TypeError, ValueError):
+            valid_window = False
+        if not valid_window:
+            raise ChannelError("stale_window_s must be a positive finite number")
         self.max_queue = max_queue
         self.stale_window_s = stale_window_s
         self._clock = clock or time.monotonic
