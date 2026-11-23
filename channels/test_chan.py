@@ -1,6 +1,7 @@
 import unittest
 
 from channels.chan import Channel, ChannelError
+from channels import Channel as PublicChannel, ChannelError as PublicChannelError
 
 NOW = 10_000.0
 
@@ -16,6 +17,17 @@ class FakeClock:
 
 
 class ValidationTests(unittest.TestCase):
+    def test_declared_public_exports_resolve(self):
+        self.assertIs(PublicChannel, Channel)
+        self.assertIs(PublicChannelError, ChannelError)
+
+    def test_nonfinite_and_malformed_stale_windows_fail_closed(self):
+        for invalid in (float("nan"), float("inf"), float("-inf"),
+                        True, "60", 10 ** 1000):
+            with self.subTest(value_type=type(invalid).__name__):
+                with self.assertRaises(ChannelError):
+                    Channel(max_queue=2, stale_window_s=invalid)
+
     def test_malformed_channel_args_rejected(self):
         with self.assertRaises(ChannelError):
             Channel(max_queue=0, stale_window_s=60.0)
