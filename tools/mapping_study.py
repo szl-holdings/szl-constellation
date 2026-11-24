@@ -1,1 +1,84 @@
-#!/usr/bin/env python3\n# mapping_study.py - measured repo-to-estate mapping study (propose-only).\n# Per Kimi governing ruling NEXT2-20261124T132125Z item B: measured, reproducible\n# node/edge/visible counts with explicit definitions, exclusions, raw results.\n# Stdlib only. Offline except the optional --with-org-snapshot flag (reads a\n# pre-saved org repos list JSON; NEVER invents counts).\nimport json\nimport os\nimport re\nimport sys\n\n\ndef load(path):\n    with open(path, "r", encoding="utf-8") as f:\n        return json.load(f)\n\n\ndef link_fields(obj):\n    # a link is any string value mentioning an szl-holdings repo path or github URL\n    links = []\n    if isinstance(obj, dict):\n        for k, v in obj.items():\n            if isinstance(v, str) and ("szl-holdings/" in v or "github.com" in v):\n                links.append({"field": k, "value": v[:120]})\n            elif isinstance(v, (list, dict)):\n                links.extend(link_fields(v))\n    elif isinstance(obj, list):\n        for item in obj:\n            links.extend(link_fields(item))\n    return links\n\n\ndef main():\n    root = sys.argv[1]\n    estates = load(os.path.join(root, "estates.json"))\n    verticals = load(os.path.join(root, "verticals.json"))\n    estate_entries = estates if isinstance(estates, list) else estates.get("estates", [])\n    vertical_entries = verticals if isinstance(verticals, list) else verticals.get("verticals", [])\n    n_estates = len(estate_entries) if isinstance(estate_entries, list) else len(estates) if isinstance(estates, dict) else 0\n    n_verticals = len(vertical_entries) if isinstance(vertical_entries, list) else len(verticals) if isinstance(verticals, dict) else 0\n    est_links = link_fields(estates)\n    ver_links = link_fields(verticals)\n    repos_referenced = set()\n    for l in est_links + ver_links:\n        m = re.findall(r"szl-holdings/([A-Za-z0-9_.-]+)", l["value"])\n        repos_referenced.update(m)\n    org_snapshot = None\n    if len(sys.argv) > 2 and os.path.isfile(sys.argv[2]):\n        org_snapshot = load(sys.argv[2])\n    result = {\n        "definitions": {\n            "estate_node": "one entry of estates.json (a rendered hologram estate)",\n            "vertical": "one entry of verticals.json",\n            "edge": "explicit string link to a szl-holdings repo (field mentioning szl-holdings/ or github.com)",\n            "visible_element": "NOT measured by this script runtime-side; requires runtime instrumentation (marked UNKNOWN)",\n        },\n        "exclusions": ["docs dir", "datasets subtree", "receipts files"],\n        "counts": {\n            "estate_nodes": n_estates,\n            "verticals": n_verticals,\n            "estate_link_fields": len(est_links),\n            "vertical_link_fields": len(ver_links),\n            "distinct_repos_referenced": len(repos_referenced),\n            "referenced_repo_names": sorted(repos_referenced),\n            "org_repos_at_snapshot": (len(org_snapshot) if org_snapshot else None),\n        },\n        "unknowns": ["visible element counts and interaction load are NOT asserted; runtime instrumentation is required for them"],\n        "org_snapshot_file": (sys.argv[2] if len(sys.argv) > 2 else None),\n    }\n    print(json.dumps(result, indent=2))\n    return 0\n\n\nif __name__ == "__main__":\n    sys.exit(main())\n
+#!/usr/bin/env python3
+# mapping_study.py - measured repo-to-estate mapping study (propose-only).
+# Per Kimi governing ruling NEXT2-20261124T132125Z item B: measured, reproducible
+# node/edge/visible counts with explicit definitions, exclusions, raw results.
+# Stdlib only. Offline; reads a pre-saved org repos snapshot JSON.
+import json
+import os
+import sys
+
+
+def load(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def link_fields(obj):
+    # a link is any string value mentioning an szl-holdings repo path or github URL
+    links = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(v, str) and ("szl-holdings/" in v or "github.com" in v):
+                links.append({"field": k, "value": v[:120]})
+            elif isinstance(v, (list, dict)):
+                links.extend(link_fields(v))
+    elif isinstance(obj, list):
+        for item in obj:
+            links.extend(link_fields(item))
+    return links
+
+
+def count_entries(container, key):
+    if isinstance(container, list):
+        return len(container)
+    if isinstance(container, dict):
+        v = container.get(key)
+        if isinstance(v, list):
+            return len(v)
+        return len(container)
+    return 0
+
+
+def main():
+    root = sys.argv[1]
+    estates = load(os.path.join(root, "estates.json"))
+    verticals = load(os.path.join(root, "verticals.json"))
+    n_estates = count_entries(estates, "estates")
+    n_verticals = count_entries(verticals, "verticals")
+    est_links = link_fields(estates)
+    ver_links = link_fields(verticals)
+    repos_referenced = set()
+    import re
+    for l in est_links + ver_links:
+        repos_referenced.update(re.findall(r"szl-holdings/([A-Za-z0-9_.-]+)", l["value"]))
+    org_snapshot = None
+    if len(sys.argv) > 2 and os.path.isfile(sys.argv[2]):
+        org_snapshot = load(sys.argv[2])
+    in_org = [r for r in sorted(repos_referenced) if (org_snapshot is None or r in org_snapshot)]
+    not_in_org = [r for r in sorted(repos_referenced) if (org_snapshot is not None and r not in org_snapshot)]
+    result = {
+        "definitions": {
+            "estate_node": "one entry of estates.json (a rendered hologram estate)",
+            "vertical": "one entry of verticals.json",
+            "edge": "explicit string link to a szl-holdings repo (field mentioning szl-holdings/ or github.com)",
+            "visible_element": "NOT measured by this script; requires runtime instrumentation (marked UNKNOWN)",
+        },
+        "exclusions": ["docs dir", "datasets subtree", "receipt files"],
+        "counts": {
+            "estate_nodes": n_estates,
+            "verticals": n_verticals,
+            "estate_link_fields": len(est_links),
+            "vertical_link_fields": len(ver_links),
+            "distinct_repos_referenced": len(repos_referenced),
+            "repos_in_org_snapshot": len(in_org),
+            "repos_referenced_not_in_org_snapshot": not_in_org,
+            "org_repos_at_snapshot": (len(org_snapshot) if org_snapshot else None),
+        },
+        "unknowns": ["visible element counts and interaction load are NOT asserted; runtime instrumentation required"],
+    }
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
