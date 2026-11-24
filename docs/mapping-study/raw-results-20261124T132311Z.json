@@ -1,0 +1,26 @@
+{
+  "definitions": {
+    "estate_node": "one entry of estates.json (a rendered hologram estate)",
+    "vertical": "one entry of verticals.json",
+    "edge": "explicit string link to a szl-holdings repo (field mentioning szl-holdings/ or github.com)",
+    "visible_element": "NOT measured by this script; requires runtime instrumentation (marked UNKNOWN)"
+  },
+  "exclusions": [
+    "docs dir",
+    "datasets subtree",
+    "receipt files"
+  ],
+  "counts": {
+    "estate_nodes": 49,
+    "verticals": 8,
+    "estate_link_fields": 27,
+    "vertical_link_fields": 0,
+    "distinct_repos_referenced": 27,
+    "repos_in_org_snapshot": 27,
+    "repos_referenced_not_in_org_snapshot": [],
+    "org_repos_at_snapshot": 191
+  },
+  "unknowns": [
+    "visible element counts and interaction load are NOT asserted; runtime instrumentation required"
+  ]
+}

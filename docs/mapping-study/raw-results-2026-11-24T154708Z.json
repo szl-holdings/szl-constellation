@@ -1,0 +1,428 @@
+{
+  "definitions": {
+    "estate_node": "one entry of estates.json (a rendered hologram estate)",
+    "vertical": "one entry of verticals.json",
+    "link_field": "string leaf that contains >=1 exact-host github.com URL or is EXACTLY a plain szl-holdings/<name> repo path (whole-string match; substring mentions in prose are NOT counted)",
+    "edge": "explicit record (source, field, kind, repo): one distinct estate-to-repository pairing; github_repos/repo_mentions may hold several repos per link field, so edges are counted from edge_records, not from link fields",
+    "visible_element": "NOT measured by this script; requires runtime instrumentation (marked UNKNOWN)"
+  },
+  "exclusions": [
+    "docs dir",
+    "datasets subtree",
+    "receipt files"
+  ],
+  "generation": {
+    "command": "python tools/mapping_study.py . docs/mapping-study/org-repos-snapshot-20261124T132311Z.json",
+    "org_snapshot_file": "org-repos-snapshot-20261124T132311Z.json",
+    "github_host_rule": "exact parsed hostname github.com only (urlparse; lowercase; trailing dot stripped; userinfo/port handled); deceptive hosts rejected",
+    "mention_rule": "estate references come ONLY from exact-host github.com URL paths or whole-string plain szl-holdings/<name> values; embedded/prose substrings never count",
+    "data_inputs": "estates.json and verticals.json under data_root at this commit's tree (inspect with git show HEAD:estates.json)"
+  },
+  "counts": {
+    "estate_nodes": 49,
+    "verticals": 8,
+    "estate_link_fields": 27,
+    "vertical_link_fields": 38,
+    "estate_to_repo_edges": 65,
+    "distinct_repos_referenced": 49,
+    "repos_in_org_snapshot": 49,
+    "repos_referenced_not_in_org_snapshot": [],
+    "external_github_paths": [],
+    "org_repos_at_snapshot": 191
+  },
+  "edge_records": [
+    {
+      "source": "estates",
+      "field": "/estates/0/repo",
+      "kind": "repo_path",
+      "repo": "a11oy-factory"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/1/repo",
+      "kind": "repo_path",
+      "repo": "anatomy"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/10/repo",
+      "kind": "repo_path",
+      "repo": "gdw-frontier"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/14/repo",
+      "kind": "repo_path",
+      "repo": "szl-guardrail-receipt"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/15/repo",
+      "kind": "repo_path",
+      "repo": "hatun-mcp"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/17/repo",
+      "kind": "repo_path",
+      "repo": "immune"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/19/repo",
+      "kind": "repo_path",
+      "repo": "khipu-lab"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/2/repo",
+      "kind": "repo_path",
+      "repo": "ayllu"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/20/repo",
+      "kind": "repo_path",
+      "repo": "szl-lambda-gate"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/22/repo",
+      "kind": "repo_path",
+      "repo": "lyte-lattice"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/23/repo",
+      "kind": "repo_path",
+      "repo": "lyte-services"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/24/repo",
+      "kind": "repo_path",
+      "repo": "nexus"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/26/repo",
+      "kind": "repo_path",
+      "repo": "puriq-live"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/27/repo",
+      "kind": "repo_path",
+      "repo": "quant-curve"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/29/repo",
+      "kind": "repo_path",
+      "repo": "retrieval-bench"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/3/repo",
+      "kind": "repo_path",
+      "repo": "cosmos"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/30/repo",
+      "kind": "repo_path",
+      "repo": "sda"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/31/repo",
+      "kind": "repo_path",
+      "repo": "szl-second-brain"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/34/repo",
+      "kind": "repo_path",
+      "repo": "szl-command-lab"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/37/repo",
+      "kind": "repo_path",
+      "repo": "szl-forge"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/38/repo",
+      "kind": "repo_path",
+      "repo": "szl-frontier"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/41/repo",
+      "kind": "repo_path",
+      "repo": "szl-khipu"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/45/repo",
+      "kind": "repo_path",
+      "repo": "szl-real-estate"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/46/repo",
+      "kind": "repo_path",
+      "repo": "szl-sovereign-os"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/48/repo",
+      "kind": "repo_path",
+      "repo": "yarqa"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/7/repo",
+      "kind": "repo_path",
+      "repo": "evidence-studio"
+    },
+    {
+      "source": "estates",
+      "field": "/estates/9/repo",
+      "kind": "repo_path",
+      "repo": "frontier-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/0",
+      "kind": "repo_path",
+      "repo": "retrieval-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/1",
+      "kind": "repo_path",
+      "repo": "frontier-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/2",
+      "kind": "repo_path",
+      "repo": "quant-curve"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/3",
+      "kind": "repo_path",
+      "repo": "szl-retrieval-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/4",
+      "kind": "repo_path",
+      "repo": "szl-engine-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/5",
+      "kind": "repo_path",
+      "repo": "szl-quant-bench"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/6",
+      "kind": "repo_path",
+      "repo": "szl-calibration"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/7",
+      "kind": "repo_path",
+      "repo": "szl-wave1-report"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/bench_fleet/8",
+      "kind": "repo_path",
+      "repo": "szl-runbook-catalog"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/0",
+      "kind": "repo_path",
+      "repo": "szl-doctrine"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/1",
+      "kind": "repo_path",
+      "repo": "governance-as-code"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/2",
+      "kind": "repo_path",
+      "repo": "governed-receipt-spec"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/3",
+      "kind": "repo_path",
+      "repo": "lutar-lean"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/4",
+      "kind": "repo_path",
+      "repo": "szl-trust"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/governance/5",
+      "kind": "repo_path",
+      "repo": "evidence-doctrine"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/0",
+      "kind": "repo_path",
+      "repo": "platform"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/1",
+      "kind": "repo_path",
+      "repo": "szl-substrate"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/2",
+      "kind": "repo_path",
+      "repo": "szl-receipt"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/3",
+      "kind": "repo_path",
+      "repo": "khipu-consensus"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/4",
+      "kind": "repo_path",
+      "repo": "hatun-mcp"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/5",
+      "kind": "repo_path",
+      "repo": "szl-frontier"
+    },
+    {
+      "source": "verticals",
+      "field": "/shared_substrate/repos/6",
+      "kind": "repo_path",
+      "repo": "szl-sovereign-os"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/0/repos/0",
+      "kind": "repo_path",
+      "repo": "killinchu"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/0/repos/1",
+      "kind": "repo_path",
+      "repo": "khipu-sda-core"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/0/repos/2",
+      "kind": "repo_path",
+      "repo": "sda"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/1/repos/0",
+      "kind": "repo_path",
+      "repo": "szl-defensive-control-plane"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/1/repos/1",
+      "kind": "repo_path",
+      "repo": "immune"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/2/repos/0",
+      "kind": "repo_path",
+      "repo": "puriq-live"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/2/repos/1",
+      "kind": "repo_path",
+      "repo": "szl-quant"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/3/repos/0",
+      "kind": "repo_path",
+      "repo": "szl-real-estate"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/3/repos/1",
+      "kind": "repo_path",
+      "repo": "vertical-services"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/4/repos/0",
+      "kind": "repo_path",
+      "repo": "lyte-services"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/4/repos/1",
+      "kind": "repo_path",
+      "repo": "lyte-lattice"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/4/repos/2",
+      "kind": "repo_path",
+      "repo": "a11oy-factory"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/5/repos/0",
+      "kind": "repo_path",
+      "repo": "ayllu"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/6/repos/0",
+      "kind": "repo_path",
+      "repo": "vertical-services"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/6/repos/1",
+      "kind": "repo_path",
+      "repo": "szl-quant"
+    },
+    {
+      "source": "verticals",
+      "field": "/verticals/7/repos/0",
+      "kind": "repo_path",
+      "repo": "david-leads"
+    }
+  ],
+  "unknowns": [
+    "visible element counts and interaction load are NOT asserted; runtime instrumentation required"
+  ]
+}

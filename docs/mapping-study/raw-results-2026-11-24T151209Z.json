@@ -1,0 +1,32 @@
+{
+  "definitions": {
+    "estate_node": "one entry of estates.json (a rendered hologram estate)",
+    "vertical": "one entry of verticals.json",
+    "edge": "string leaf containing an exact-host github.com URL or an szl-holdings/<name> repo-path mention (v2: parsed, not substring-matched)",
+    "visible_element": "NOT measured by this script; requires runtime instrumentation (marked UNKNOWN)"
+  },
+  "exclusions": [
+    "docs dir",
+    "datasets subtree",
+    "receipt files"
+  ],
+  "generation": {
+    "command": "python tools/mapping_study.py <data_root> <org_snapshot.json>",
+    "org_snapshot_file": "org-repos-snapshot-20261124T132311Z.json",
+    "github_host_rule": "exact parsed hostname github.com only; deceptive hosts rejected"
+  },
+  "counts": {
+    "estate_nodes": 49,
+    "verticals": 8,
+    "estate_link_fields": 27,
+    "vertical_link_fields": 38,
+    "distinct_repos_referenced": 49,
+    "repos_in_org_snapshot": 49,
+    "repos_referenced_not_in_org_snapshot": [],
+    "external_github_paths": [],
+    "org_repos_at_snapshot": 191
+  },
+  "unknowns": [
+    "visible element counts and interaction load are NOT asserted; runtime instrumentation required"
+  ]
+}
