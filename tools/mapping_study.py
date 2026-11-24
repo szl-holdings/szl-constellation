@@ -6,6 +6,8 @@
 import json
 import os
 import sys
+import re
+from urllib.parse import urlsplit
 
 
 def load(path):
@@ -13,13 +15,38 @@ def load(path):
         return json.load(f)
 
 
+def repo_reference(value):
+    """Return a repo name only for an exact SZL slug or GitHub HTTPS URL."""
+    if not isinstance(value, str):
+        return None
+    if any(ch.isspace() or ord(ch) < 32 for ch in value):
+        return None
+    match = re.fullmatch(r"szl-holdings/([A-Za-z0-9_.-]+)", value)
+    if match:
+        name = match.group(1)
+    else:
+        try:
+            parsed = urlsplit(value)
+            if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+                return None
+        except ValueError:
+            return None
+        match = re.fullmatch(
+            r"/szl-holdings/([A-Za-z0-9_.-]+)(?:/[^?#]*)?", parsed.path
+        )
+        if not match:
+            return None
+        name = match.group(1)
+    return name if name not in (".", "..") else None
+
+
 def link_fields(obj):
-    # a link is any string value mentioning an szl-holdings repo path or github URL
+    # Only explicit SZL repository references count as edges.
     links = []
     if isinstance(obj, dict):
         for k, v in obj.items():
-            if isinstance(v, str) and ("szl-holdings/" in v or "github.com" in v):
-                links.append({"field": k, "value": v[:120]})
+            if (repo := repo_reference(v)) is not None:
+                links.append({"field": k, "value": v[:120], "repo": repo})
             elif isinstance(v, (list, dict)):
                 links.extend(link_fields(v))
     elif isinstance(obj, list):
@@ -47,10 +74,7 @@ def main():
     n_verticals = count_entries(verticals, "verticals")
     est_links = link_fields(estates)
     ver_links = link_fields(verticals)
-    repos_referenced = set()
-    import re
-    for l in est_links + ver_links:
-        repos_referenced.update(re.findall(r"szl-holdings/([A-Za-z0-9_.-]+)", l["value"]))
+    repos_referenced = {link["repo"] for link in est_links + ver_links}
     org_snapshot = None
     if len(sys.argv) > 2 and os.path.isfile(sys.argv[2]):
         org_snapshot = load(sys.argv[2])
@@ -60,7 +84,7 @@ def main():
         "definitions": {
             "estate_node": "one entry of estates.json (a rendered hologram estate)",
             "vertical": "one entry of verticals.json",
-            "edge": "explicit string link to a szl-holdings repo (field mentioning szl-holdings/ or github.com)",
+            "edge": "exact szl-holdings repo slug or HTTPS github.com URL with a szl-holdings repository path",
             "visible_element": "NOT measured by this script; requires runtime instrumentation (marked UNKNOWN)",
         },
         "exclusions": ["docs dir", "datasets subtree", "receipt files"],
