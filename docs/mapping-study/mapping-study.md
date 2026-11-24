@@ -27,3 +27,16 @@ conversation at creation time.
 No scale, performance, or coverage claims beyond the measured counts. Visible
 elements and interaction load remain UNKNOWN until runtime instrumentation exists.
 Re-measure with the committed tool at any later revision before quoting numbers.
+
+
+## v2 repair (re-review F01-F04)
+
+- Tool repaired: exact-host URL parsing (github.com hostname only, urllib.parse), szl-holdings
+  matched in parsed URL paths, parse-before-truncation, .git normalization, fail-closed CLI.
+- Regression battery: tools/tests/test_mapping_study.py (nested, dict-shaped, deceptive hosts,
+  pseudo-extension hosts, parse-before-truncation, multi-link, CLI error classes).
+- Generation command (verbatim artifact " + raw_name + "):
+  python tools/mapping_study.py <data_root> docs/mapping-study/org-repos-snapshot-20261124T132311Z.json
+  where <data_root> is the repo directory containing estates.json and verticals.json.
+- The prior raw-results file predates the repair and is kept for history; the v2 file
+  above is the reproducible artifact (deterministic output, bit-identical across runs).
