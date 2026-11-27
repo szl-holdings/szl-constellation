@@ -58,7 +58,8 @@ jobs:
             tools/constellation_targets.py \
             tools/verify_constellation.py \
             tools/publish_constellation.py \
-            tools/run_publish_constellation.py
+            tools/run_publish_constellation.py \
+            tools/estate_graph_pyg.py
 
       - name: Run recovered application contracts
         working-directory: space
