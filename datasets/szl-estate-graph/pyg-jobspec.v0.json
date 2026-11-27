@@ -1,0 +1,66 @@
+{
+  "schema": "szl.estate-graph.pyg-job/v0",
+  "dataset": {
+    "gitPath": "datasets/szl-estate-graph",
+    "graphSchema": "szl.estate-graph/v1",
+    "hfRepoId": "SZLHOLDINGS/szl-estate-graph",
+    "hfRevision": "8262675ce6550c0bb180f54139c34ccd03ec5e77",
+    "hfApiLicense": "apache-2.0",
+    "hfApiLicenseName": null,
+    "licenseObservedOn": "2026-11-27",
+    "amaruLicenseCheck": "PENDING"
+  },
+  "graph": {
+    "nodeCount": 67,
+    "edgeCount": 126,
+    "nodeKinds": {
+      "estate": 49,
+      "hub": 3,
+      "substrate": 7,
+      "vertical": 8
+    },
+    "edgeKinds": {
+      "governed-by": 8,
+      "runs-on": 56,
+      "synapse": 49,
+      "trinity": 3,
+      "wired-into": 10
+    }
+  },
+  "container": {
+    "status": "NOT_BUILT",
+    "digest": "UNKNOWN",
+    "mutableTagForbidden": true,
+    "forbiddenRegistries": ["nvcr.io", "ngc.nvidia.com"],
+    "plannedBase": "public CPython or PyTorch image; digest UNKNOWN",
+    "packages": [
+      {
+        "name": "torch-geometric",
+        "pypiVersionObserved": "2.8.1",
+        "pypiLicense": "MIT",
+        "githubSpdx": "MIT",
+        "amaruLicenseCheck": "PENDING"
+      },
+      {
+        "name": "torch",
+        "githubApiSpdx": "NOASSERTION",
+        "licenseObservation": "UNKNOWN",
+        "note": "pytorch/pytorch LICENSE on main contains BSD-style redistribution clauses. Exact SPDX id and commit are UNKNOWN.",
+        "amaruLicenseCheck": "PENDING"
+      }
+    ]
+  },
+  "workload": "pyg-graph-read",
+  "launch": false,
+  "launcher": "saywa",
+  "launcherImplementation": "UNKNOWN",
+  "providers": ["massed", "salad"],
+  "caps": {
+    "perRunUsd": 100,
+    "perDayUsd": 500,
+    "perMonthUsd": 5000,
+    "perRunUusd": 100000000,
+    "perDayUusd": 500000000,
+    "perMonthUusd": 5000000000
+  }
+}
